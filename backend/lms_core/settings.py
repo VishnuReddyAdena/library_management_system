@@ -95,6 +95,7 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL')
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3005",
     "http://127.0.0.1:3005",
+    "https://library-management-system-dcya95l8g.vercel.app",
 ]
 if FRONTEND_URL:
     CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
