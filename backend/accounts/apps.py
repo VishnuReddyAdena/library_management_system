@@ -12,9 +12,8 @@ class AccountsConfig(AppConfig):
 
             User = get_user_model()
 
-            if not User.objects.filter(username='admin').exists():
+            if not User.objects.filter(email='admin@gmail.com').exists():
                 User.objects.create_superuser(
-                    username='admin',
                     email='admin@gmail.com',
                     password='admin123'
                 )
