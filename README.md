@@ -133,18 +133,6 @@ To populate the database with test accounts and sample data:
 ```bash
 cd backend
 npm run seed
-```
-
-**Test Accounts:**
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@library.edu` | `password123` |
-| Librarian | `librarian@library.edu` | `password123` |
-| Faculty | `faculty@library.edu` | `password123` |
-| Student | `student@library.edu` | `password123` |
-
-> **⚠️ Security Note**: Change these credentials immediately in production.
 
 ---
 
@@ -201,44 +189,6 @@ npm run preview    # Preview production build locally
 
 ---
 
-## ☁️ Deployment
-
-### Deploy Backend (Render, Heroku, Railway, etc.)
-
-1. **Set Environment Variables:**
-   - `MONGO_URI`: Your MongoDB Atlas connection string
-   - `JWT_SECRET_KEY`: Generate a strong random secret
-   - `NODE_ENV`: `production`
-   - `PORT`: `8000` (or your platform's default)
-
-2. **Build & Start Commands:**
-   - Build: `npm install`
-   - Start: `npm start`
-
-3. **Example Render Deployment:**
-   - Connect your GitHub repo
-   - Set runtime: Node.js
-   - Build command: `npm install`
-   - Start command: `npm start`
-
-### Deploy Frontend (Vercel, Netlify, GitHub Pages, etc.)
-
-1. **Set Environment Variables:**
-   - `VITE_API_URL`: Your deployed backend URL (e.g., `https://libraryos-api.onrender.com`)
-
-2. **Build & Deploy:**
-   - Build command: `npm run build`
-   - Output directory: `dist`
-   - Publish directory: `dist`
-
-3. **Example Vercel Deployment:**
-   - Import project from GitHub
-   - Framework: Vite
-   - Output directory: `dist`
-   - Add environment variables
-   - Deploy!
-
----
 
 ## 🔒 Security Best Practices
 
@@ -321,7 +271,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 **Vishnu Reddy Adena**
 
 - GitHub: [@VishnuReddyAdena](https://github.com/VishnuReddyAdena)
-- Portfolio/Contact: (Add your links here)
 
 ---
 
