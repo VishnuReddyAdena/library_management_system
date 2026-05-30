@@ -192,10 +192,20 @@ function LocationSection({ loc, setLoc, editMode }) {
 // ─── Main Profile Component ───────────────────────────────────────────────────
 export default function Profile({ user, onAvatarChange }) {
   const loginEmail = user?.email || 'john.doe@library.edu';
-  const loginName  = user?.name  || 'Librarian';
+  const getFallbackName = () => {
+    if (user?.name) return user.name;
+    if (user?.email) {
+      const part = user.email.split('@')[0];
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }
+    return 'User';
+  };
+  const loginName = getFallbackName();
+  const loginRole = user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Student';
+  const emailPrefix = user?.email ? `${user.email}_` : '';
 
   // Avatar — stored as base64 so it survives page reload
-  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('lms_avatar') || null);
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem(emailPrefix + 'lms_avatar') || null);
   const fileInputRef = useRef(null);
 
   const handleAvatarClick = () => fileInputRef.current?.click();
@@ -208,7 +218,7 @@ export default function Profile({ user, onAvatarChange }) {
     reader.onload = (ev) => {
       const base64 = ev.target.result;
       setAvatarUrl(base64);
-      localStorage.setItem('lms_avatar', base64);
+      localStorage.setItem(emailPrefix + 'lms_avatar', base64);
       if (onAvatarChange) onAvatarChange(base64);
     };
     reader.readAsDataURL(file);
@@ -218,8 +228,8 @@ export default function Profile({ user, onAvatarChange }) {
   const [saved,    setSaved]    = useState(false);
 
   // ── Helper: load from localStorage, fallback to default ──
-  const ls = (key, def) => { try { return localStorage.getItem(key) || def; } catch { return def; } };
-  const lsJson = (key, def) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } };
+  const ls = (key, def) => { try { return localStorage.getItem(emailPrefix + key) || def; } catch { return def; } };
+  const lsJson = (key, def) => { try { const v = localStorage.getItem(emailPrefix + key); return v ? JSON.parse(v) : def; } catch { return def; } };
 
   const DEFAULT_LOC = { country: '', state: '', district: '', village: '', pincode: '', address: '' };
 
@@ -228,14 +238,14 @@ export default function Profile({ user, onAvatarChange }) {
   const [phone, setPhone] = useState(() => ls('lms_p_phone', '+91 98765 43210'));
   const [loc,   setLoc]   = useState(() => lsJson('lms_p_loc', DEFAULT_LOC));
 
-  const [role, setRole]   = useState(() => ls('lms_p_role', 'Student'));
+  const [role, setRole]   = useState(() => ls('lms_p_role', loginRole));
 
   // Committed (displayed) values
   const [displayName,  setDisplayName]  = useState(() => ls('lms_p_name',  loginName));
   const [displayEmail, setDisplayEmail] = useState(() => ls('lms_p_email', loginEmail));
   const [displayPhone, setDisplayPhone] = useState(() => ls('lms_p_phone', '+91 98765 43210'));
   const [displayLoc,   setDisplayLoc]   = useState(() => lsJson('lms_p_loc', DEFAULT_LOC));
-  const [displayRole,  setDisplayRole]  = useState(() => ls('lms_p_role', 'Student'));
+  const [displayRole,  setDisplayRole]  = useState(() => ls('lms_p_role', loginRole));
 
   const memberSince = '2024-01-15';
   const memberId    = 'M001';
@@ -247,11 +257,11 @@ export default function Profile({ user, onAvatarChange }) {
     setDisplayLoc({ ...loc });
     setDisplayRole(role);
     // Persist to localStorage
-    localStorage.setItem('lms_p_name',  name);
-    localStorage.setItem('lms_p_email', email);
-    localStorage.setItem('lms_p_phone', phone);
-    localStorage.setItem('lms_p_loc',   JSON.stringify(loc));
-    localStorage.setItem('lms_p_role',  role);
+    localStorage.setItem(emailPrefix + 'lms_p_name',  name);
+    localStorage.setItem(emailPrefix + 'lms_p_email', email);
+    localStorage.setItem(emailPrefix + 'lms_p_phone', phone);
+    localStorage.setItem(emailPrefix + 'lms_p_loc',   JSON.stringify(loc));
+    localStorage.setItem(emailPrefix + 'lms_p_role',  role);
     setEditMode(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -300,10 +310,10 @@ export default function Profile({ user, onAvatarChange }) {
                 <img
                   src={avatarUrl}
                   alt="Profile"
-                  className="w-24 h-24 rounded-2xl object-cover mx-auto shadow-lg shadow-indigo-500/30 border-2 border-indigo-500/40"
+                  className="w-24 h-24 rounded-2xl object-cover mx-auto shadow-lg shadow-white/5 border-2 border-white/20"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-3xl font-bold text-white mx-auto shadow-lg shadow-indigo-500/30">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-white to-slate-300 flex items-center justify-center text-3xl font-bold text-slate-950 mx-auto shadow-lg shadow-white/5">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -321,7 +331,7 @@ export default function Profile({ user, onAvatarChange }) {
             <p className="text-slate-300 text-sm mt-0.5">{displayEmail}</p>
 
             <div className="mt-4 flex items-center justify-center gap-2">
-              <span className="badge bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-sm px-3 py-1">
+              <span className="badge bg-white/5 text-slate-300 border border-white/10 text-sm px-3 py-1">
                 <ShieldCheck className="w-3.5 h-3.5 inline mr-1" />{displayRole}
               </span>
             </div>
@@ -329,7 +339,7 @@ export default function Profile({ user, onAvatarChange }) {
             <div className="mt-5 pt-5 border-t border-white/10 space-y-2 text-left">
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <User className="w-4 h-4 text-slate-400" />
-                <span>ID: <span className="text-indigo-400 font-mono">{memberId}</span></span>
+                <span>ID: <span className="text-slate-300 font-mono">{memberId}</span></span>
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <Calendar className="w-4 h-4 text-slate-400" />
@@ -386,7 +396,7 @@ export default function Profile({ user, onAvatarChange }) {
           {editMode && (
             <div className="card-glass p-7">
               <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-400" />Personal Details
+                <User className="w-5 h-5 text-white" />Personal Details
               </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -444,6 +454,8 @@ export default function Profile({ user, onAvatarChange }) {
                     >
                       <option value="Student" className="bg-slate-900">Student</option>
                       <option value="Faculty" className="bg-slate-900">Faculty</option>
+                      <option value="Librarian" className="bg-slate-900">Librarian</option>
+                      <option value="Admin" className="bg-slate-900">Admin</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   </div>
@@ -485,12 +497,12 @@ export default function Profile({ user, onAvatarChange }) {
           {/* Borrowing History */}
           <div className="card-glass p-7">
             <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-purple-400" />Borrowing History
+              <BookOpen className="w-5 h-5 text-white" />Borrowing History
             </h3>
             <div className="space-y-3">
               {BORROWED_BOOKS.map((b, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/8 transition-colors">
-                  <div className="w-12 h-14 bg-gradient-to-br from-indigo-600/40 to-purple-600/40 rounded-lg flex items-center justify-center text-xl border border-white/10 flex-shrink-0">
+                  <div className="w-12 h-14 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center text-xl border border-white/5 flex-shrink-0">
                     {b.cover}
                   </div>
                   <div className="flex-1 min-w-0">

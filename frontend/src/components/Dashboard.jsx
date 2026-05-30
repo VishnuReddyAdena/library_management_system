@@ -5,6 +5,7 @@ import {
   Package, Edit3, Trash2, CheckCircle, XCircle, BookOpen, Pin, Mail,
   CreditCard, FileText, Calendar, Download, BarChart2, Shield, Upload
 } from 'lucide-react';
+import { addAuditLog } from '../utils/auditLogger';
 
 // ─── Custom Hooks ───────────────────────────────────────────────────────────────
 function useLocalStorage(key, initialValue) {
@@ -88,6 +89,16 @@ const RECENT_ACTIVITY = [
   { text: 'Fine of ₹27 waived for M002', time: '5h ago', type: 'fine' },
 ];
 
+const MOCK_LOGS = [
+  { id: 1, user: 'Admin One',   action: 'Updated fine rate to ₹12/day',        time: '2m ago',  level: 'warning' },
+  { id: 2, user: 'Sarah Mehta', action: 'Deleted book ISBN 9780132350884',      time: '15m ago', level: 'error'   },
+  { id: 3, user: 'System',      action: 'Backup completed successfully',        time: '1h ago',  level: 'success' },
+  { id: 4, user: 'Admin One',   action: 'Added new librarian L003',             time: '3h ago',  level: 'info'    },
+  { id: 5, user: 'System',      action: 'Scheduled fine auto-calculation ran',  time: '6h ago',  level: 'success' },
+  { id: 6, user: 'Sarah Mehta', action: 'Issued 5 books via bulk scan',         time: '8h ago',  level: 'info'    },
+  { id: 7, user: 'Admin One',   action: 'Blocked member M003 (Rahul Singh)',    time: '1d ago',  level: 'warning' },
+];
+
 const TABS = [
   { key: 'overview',      label: 'Overview',        icon: TrendingUp  },
   { key: 'books',         label: 'Books Management', icon: BookText    },
@@ -96,6 +107,7 @@ const TABS = [
   { key: 'reservations',  label: 'Reservations',     icon: Calendar    },
   { key: 'payments',      label: 'Payments',         icon: CreditCard  },
   { key: 'reports',       label: 'Reports',          icon: FileText    },
+  { key: 'logs',          label: 'Audit Logs',       icon: FileText    },
 ];
 
 // ─── Sub-sections ─────────────────────────────────────────────────────────────
@@ -114,7 +126,7 @@ function StatCard({ icon: Icon, label, value, sub, color }) {
   );
 }
 
-function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, activityLog, addActivity }) {
+function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, user }) {
   const [memberId, setMemberId] = useLocalStorage('library_quick_memberId', '');
   const [isbn, setIsbn] = useLocalStorage('library_quick_isbn', '');
   const [memberSearch, setMemberSearch] = useState('');
@@ -148,6 +160,7 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, activityL
     };
     setIssuedBooks([bookToAdd, ...issuedBooks]);
     addActivity(`"${bookToAdd.book}" issued to ${memberObj.name}`, 'issue');
+    addAuditLog(`Issued book "${bookToAdd.book}" (ISBN: ${isbn}) to ${memberObj.name}`, 'success', user?.name || 'Librarian');
     alert(`Book ${isbn} successfully issued to ${memberObj.name}. (Check Circulation Tab)`);
     setMemberId('');
     setIsbn('');
@@ -175,7 +188,11 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, activityL
     setIssuedBooks(updated);
     const memberName = members.find(m => m.id === updated[bookIndex].memberId)?.name || 'Member';
     addActivity(`"${updated[bookIndex].book}" returned by ${memberName}`, 'return');
-    if (finalFine > updated[bookIndex].fine) addActivity(`Fine of ₹${finalFine} registered for ${memberName}`, 'fine');
+    addAuditLog(`Returned book "${updated[bookIndex].book}" (ISBN: ${isbn}) from ${memberName}`, 'success', user?.name || 'Librarian');
+    if (finalFine > updated[bookIndex].fine) {
+      addActivity(`Fine of ₹${finalFine} registered for ${memberName}`, 'fine');
+      addAuditLog(`Late fine of ₹${finalFine} registered for ${memberName}`, 'warning', user?.name || 'Librarian');
+    }
     alert(`Reference ${isbn} successfully returned!`);
     setMemberId('');
     setIsbn('');
@@ -266,19 +283,51 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, activityL
         </div>
 
         {/* Activity Feed */}
-        <div className="card-glass p-6">
-          <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-purple-400" />Real-Time Activity</h2>
-          <div className="space-y-3">
-            {activityLog.map((a, i) => {
-              const colors = { issue: 'bg-indigo-500', return: 'bg-emerald-500', member: 'bg-purple-500', order: 'bg-amber-500', fine: 'bg-red-500' };
-              const diffMins = Math.floor((Date.now() - a.timestamp) / 60000);
-              const timeStr = diffMins < 1 ? 'Just now' : diffMins < 60 ? `${diffMins}m ago` : diffMins < 1440 ? `${Math.floor(diffMins / 60)}h ago` : `${Math.floor(diffMins / 1440)}d ago`;
-
+        <div className="card-glass p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-bold text-red-500 tracking-wider flex items-center gap-2">
+              <span className="text-red-500 animate-pulse text-base leading-none">●</span> Live Activity
+            </h3>
+            <button 
+              onClick={() => onSwitchTab('logs')}
+              className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-full transition-colors"
+            >
+              View All Logs
+            </button>
+          </div>
+          <div className="space-y-1 flex-1 overflow-y-auto pr-2">
+            {(logs || []).slice(0, 5).map((log, i) => {
+              const styles = { 
+                success: { icon: CheckCircle, colors: 'text-emerald-400 bg-emerald-500/10' }, 
+                error:   { icon: XCircle,     colors: 'text-red-400 bg-red-500/10' }, 
+                warning: { icon: AlertCircle, colors: 'text-amber-400 bg-amber-500/10' }, 
+                info:    { icon: FileText,    colors: 'text-blue-400 bg-blue-500/10' } 
+              }[log.level] || { icon: FileText, colors: 'text-blue-400 bg-blue-500/10' };
+              const Icon = styles.icon;
+              const formatTime = (l) => {
+                if (l.timestamp) {
+                  const diff = Math.floor((Date.now() - l.timestamp) / 60000);
+                  if (diff < 1) return 'Just now';
+                  if (diff < 60) return `${diff}m ago`;
+                  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+                  return `${Math.floor(diff / 1440)}d ago`;
+                }
+                return l.time;
+              };
               return (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors">
-                  <span className={`w-2.5 h-2.5 rounded-full ${colors[a.type] || 'bg-slate-500'} flex-shrink-0`} />
-                  <p className="text-slate-300 text-sm flex-1">{a.text}</p>
-                  <span className="text-slate-500 text-xs whitespace-nowrap">{a.time || timeStr}</span>
+                <div key={log.id || i} className="flex gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors relative">
+                  {i !== 4 && <div className="absolute left-[27px] top-10 bottom-0 w-[1px] bg-white/10" />}
+                  <div className={`p-2 rounded-full h-fit flex-shrink-0 z-10 ${styles.colors}`}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-200 mt-0.5 leading-snug">{log.action}</p>
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                      <span className="text-slate-400">{log.user}</span>
+                      <span className="w-1 h-1 rounded-full bg-slate-700" />
+                      <span>{formatTime(log)}</span>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -289,7 +338,7 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, activityL
   );
 }
 
-function Circulation({ issuedBooks, setIssuedBooks, addActivity }) {
+function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [newBook, setNewBook] = useLocalStorage('library_draft_newBook', { member: '', memberId: '', book: '', isbn: '', dueDate: '' });
 
@@ -347,6 +396,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity }) {
     };
     setIssuedBooks([bookToAdd, ...issuedBooks]);
     addActivity(`"${bookToAdd.book}" formally issued to ${bookToAdd.member}`, 'issue');
+    addAuditLog(`Issued book "${bookToAdd.book}" (ISBN: ${bookToAdd.isbn}) to ${bookToAdd.member}`, 'success', user?.name || 'Librarian');
     setShowIssueModal(false);
     setNewBook({ member: '', memberId: '', book: '', isbn: '', dueDate: '' });
   };
@@ -409,7 +459,11 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity }) {
       return b;
     }));
     addActivity(`"${returnModalBook.book}" formally returned by ${returnModalBook.member}`, 'return');
-    if (calculatedFine > (returnModalBook.fine || 0)) addActivity(`System mapped fine of ₹${calculatedFine} for ${returnModalBook.member}`, 'fine');
+    addAuditLog(`Returned book "${returnModalBook.book}" (ISBN: ${returnModalBook.isbn}) from ${returnModalBook.member}`, 'success', user?.name || 'Librarian');
+    if (calculatedFine > (returnModalBook.fine || 0)) {
+      addActivity(`System mapped fine of ₹${calculatedFine} for ${returnModalBook.member}`, 'fine');
+      addAuditLog(`Late fine of ₹${calculatedFine} registered for ${returnModalBook.member}`, 'warning', user?.name || 'Librarian');
+    }
     setReturnModalBook(null);
   };
 
@@ -417,6 +471,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity }) {
     setIssuedBooks(issuedBooks.map(b => b.id === id ? { ...b, status: 'issued' } : b));
     const target = issuedBooks.find(b => b.id === id);
     addActivity(`Return successfully reversed for "${target.book}"`, 'issue');
+    addAuditLog(`Reversed return of book "${target.book}" for ${target.member}`, 'warning', user?.name || 'Librarian');
   };
 
   return (
@@ -672,6 +727,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity }) {
                       <button onClick={() => {
                         setIssuedBooks(issuedBooks.map(b => b.id === row.id ? { ...b, fine: 0 } : b));
                         addActivity(`Financial penalty formally waived for ${row.member}`, 'fine');
+                        addAuditLog(`Waived fine for ${row.member} on book "${row.book}"`, 'success', user?.name || 'Librarian');
                       }}
                         className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
                         Clear Fine
@@ -757,7 +813,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity }) {
   );
 }
 
-function MembersTab({ members, setMembers, addActivity }) {
+function MembersTab({ members, setMembers, addActivity, user }) {
   const [showModal, setShowModal] = useState(false);
   const [newMember, setNewMember] = useLocalStorage('library_draft_newMember', { name: '', email: '', type: 'Student' });
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -771,6 +827,7 @@ function MembersTab({ members, setMembers, addActivity }) {
     setRecentlyDeleted(m);
     setMembers(members.filter(x => x.id !== m.id));
     if (addActivity) addActivity(`${m.name} removed from registry`, 'member');
+    addAuditLog(`Removed member ${m.name} (${m.id})`, 'error', user?.name || 'Librarian');
     setConfirmDelete(null);
   };
 
@@ -778,6 +835,7 @@ function MembersTab({ members, setMembers, addActivity }) {
     if (!recentlyDeleted) return;
     setMembers([recentlyDeleted, ...members]);
     if (addActivity) addActivity(`${recentlyDeleted.name} restored to system`, 'member');
+    addAuditLog(`Restored member ${recentlyDeleted.name} (${recentlyDeleted.id})`, 'success', user?.name || 'Librarian');
     setRecentlyDeleted(null);
   };
 
@@ -793,6 +851,7 @@ function MembersTab({ members, setMembers, addActivity }) {
     };
     setMembers([addedMember, ...members]);
     addActivity(`New member: ${newMember.name} systematically registered`, 'member');
+    addAuditLog(`Registered member ${newMember.name} (${addedMember.id})`, 'success', user?.name || 'Librarian');
     setShowModal(false);
     setNewMember({ name: '', email: '', type: 'Student' });
   };
@@ -808,7 +867,10 @@ function MembersTab({ members, setMembers, addActivity }) {
       }
       return m;
     }));
-    if (targetName) addActivity(`Account conditionally ${newStatus.toLowerCase()} for ${targetName}`, 'member');
+    if (targetName) {
+      addActivity(`Account conditionally ${newStatus.toLowerCase()} for ${targetName}`, 'member');
+      addAuditLog(`Changed status of member ${targetName} to ${newStatus === 'Frozen' ? 'Frozen' : 'Active'}`, newStatus === 'Frozen' ? 'warning' : 'success', user?.name || 'Librarian');
+    }
   };
 
   const statusCls = { Active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', Expiring: 'bg-amber-500/15 text-amber-400 border-amber-500/30', Expired: 'bg-slate-500/15 text-slate-400 border-slate-500/30' };
@@ -1178,7 +1240,7 @@ function AuthorsTab({ authors, setAuthors }) {
   );
 }
 
-function BooksManagementTab({ books, setBooks, onNotify }) {
+function BooksManagementTab({ books, setBooks, onNotify, user }) {
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importData, setImportData] = useState(null);
@@ -1214,10 +1276,12 @@ function BooksManagementTab({ books, setBooks, onNotify }) {
       }
       setBooks(books.map(b => b.id === editingId ? { ...b, ...form, total: newTotal, available: newTotal - issued } : b));
       if (onNotify) onNotify('Book updated successfully.', 'success');
+      addAuditLog(`Updated book "${form.title}" (ISBN: ${form.isbn})`, 'info', user?.name || 'Librarian');
     } else {
       if (books.find(b => b.isbn === form.isbn)) { alert('ISBN already exists!'); return; }
       setBooks([{ id:`B${Date.now()}`, ...form, total: parseInt(form.copies), available: parseInt(form.copies) }, ...books]);
       if (onNotify) onNotify('Book added successfully.', 'success');
+      addAuditLog(`Added book "${form.title}" (ISBN: ${form.isbn})`, 'success', user?.name || 'Librarian');
     }
     
     setShowModal(false);
@@ -1280,6 +1344,7 @@ function BooksManagementTab({ books, setBooks, onNotify }) {
         setIsImporting(false);
         setImportProgress(0);
         if (onNotify) onNotify(`Successfully imported ${importData.length} books.`, 'success');
+        addAuditLog(`Imported ${importData.length} books via bulk import`, 'success', user?.name || 'Librarian');
         setImportData(null);
         setShowImportModal(false);
       }
@@ -1419,7 +1484,7 @@ function BooksManagementTab({ books, setBooks, onNotify }) {
                 <td className="p-4 text-sm font-bold">{b.available > 0 ? <span className="text-emerald-400">{b.available}</span> : <span className="text-red-400">Out of Stock</span>}</td>
                 <td className="p-4 flex gap-2">
                   <button onClick={() => handleEditClick(b)} className="p-2 text-slate-400 hover:text-white bg-white/5 rounded-lg" title="Edit"><Edit3 className="w-4 h-4" /></button>
-                  <button onClick={() => { if(b.available < b.total) { alert('Cannot delete — copies are currently issued.'); return; } setBooks(books.filter(x => x.id !== b.id)); }} className="p-2 text-red-400 hover:text-white bg-red-500/10 rounded-lg" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => { if(b.available < b.total) { alert('Cannot delete — copies are currently issued.'); return; } setBooks(books.filter(x => x.id !== b.id)); addAuditLog(`Deleted book "${b.title}" (ISBN: ${b.isbn})`, 'error', user?.name || 'Librarian'); }} className="p-2 text-red-400 hover:text-white bg-red-500/10 rounded-lg" title="Delete"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
             ))}
@@ -1431,7 +1496,7 @@ function BooksManagementTab({ books, setBooks, onNotify }) {
 }
 
 // ─── Reservations Tab ─────────────────────────────────────────────────────────
-function ReservationsTab({ reservations, setReservations }) {
+function ReservationsTab({ reservations, setReservations, user }) {
   return (
     <div className="space-y-6 animate-fade-in">
       <h2 className="section-title mb-0">Reservation Queue</h2>
@@ -1456,8 +1521,8 @@ function ReservationsTab({ reservations, setReservations }) {
                 <td className="p-4 flex gap-2">
                   {r.status === 'Pending' && (
                     <>
-                      <button onClick={() => setReservations(reservations.map(x => x.id===r.id ? {...x, status:'Approved'} : x))} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Approve</button>
-                      <button onClick={() => setReservations(reservations.map(x => x.id===r.id ? {...x, status:'Cancelled'} : x))} className="px-3 py-1.5 text-xs font-bold rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10">Cancel</button>
+                      <button onClick={() => { setReservations(reservations.map(x => x.id===r.id ? {...x, status:'Approved'} : x)); addAuditLog(`Approved reservation for "${r.title}" for member ${r.member}`, 'success', user?.name || 'Librarian'); }} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Approve</button>
+                      <button onClick={() => { setReservations(reservations.map(x => x.id===r.id ? {...x, status:'Cancelled'} : x)); addAuditLog(`Cancelled reservation for "${r.title}" for member ${r.member}`, 'warning', user?.name || 'Librarian'); }} className="px-3 py-1.5 text-xs font-bold rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10">Cancel</button>
                     </>
                   )}
                   {r.status !== 'Pending' && <span className="text-xs text-slate-500">—</span>}
@@ -1472,7 +1537,7 @@ function ReservationsTab({ reservations, setReservations }) {
 }
 
 // ─── Payments Tab ─────────────────────────────────────────────────────────────
-function PaymentsTab({ payments, setPayments }) {
+function PaymentsTab({ payments, setPayments, user }) {
   const verified = payments.filter(p => p.status === 'Verified').reduce((a,b) => a+b.amount, 0);
   const pending  = payments.filter(p => p.status === 'Pending').reduce((a,b) => a+b.amount, 0);
   return (
@@ -1506,7 +1571,7 @@ function PaymentsTab({ payments, setPayments }) {
                 </td>
                 <td className="p-4">
                   {p.status === 'Pending' && (
-                    <button onClick={() => setPayments(payments.map(x => x.id===p.id ? {...x, status:'Verified'} : x))} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Verify</button>
+                    <button onClick={() => { setPayments(payments.map(x => x.id===p.id ? {...x, status:'Verified'} : x)); addAuditLog(`Verified payment of ₹${p.amount} from ${p.member}`, 'success', user?.name || 'Librarian'); }} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Verify</button>
                   )}
                 </td>
               </tr>
@@ -1790,6 +1855,74 @@ function ReportsTab({ issuedBooks, members, payments }) {
   );
 }
 
+function LogsTab({ logs }) {
+  const [filter, setFilter] = useState('all');
+
+  const colors = {
+    success: { badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-500' },
+    error:   { badge: 'bg-red-500/10 text-red-400 border-red-500/30',             dot: 'bg-red-500'     },
+    warning: { badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30',       dot: 'bg-amber-500'   },
+    info:    { badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30',           dot: 'bg-blue-500'    },
+  };
+
+  const filtered = filter === 'all' ? logs : logs.filter(l => l.level === filter);
+
+  const formatTime = (l) => {
+    if (l.timestamp) {
+      const diff = Math.floor((Date.now() - l.timestamp) / 60000);
+      if (diff < 1) return 'Just now';
+      if (diff < 60) return `${diff}m ago`;
+      if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+      return `${Math.floor(diff / 1440)}d ago`;
+    }
+    return l.time;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="section-title mb-0">Audit Logs</h2>
+        <div className="flex gap-2">
+          {['all', 'success', 'warning', 'error', 'info'].map(lvl => (
+            <button key={lvl} onClick={() => setFilter(lvl)}
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all border
+                ${filter === lvl ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'}`}>
+              {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card-glass overflow-hidden">
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-white/10 bg-slate-800/50">
+            {['Level', 'User', 'Action', 'Time'].map(h =>
+              <th key={h} className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">{h}</th>
+            )}
+          </tr></thead>
+          <tbody className="divide-y divide-white/5">
+            {filtered.map(log => (
+              <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                <td className="p-4">
+                  <span className={`badge border text-xs ${colors[log.level].badge}`}>
+                    {log.level.toUpperCase()}
+                  </span>
+                </td>
+                <td className="p-4 text-sm font-bold text-white">{log.user}</td>
+                <td className="p-4 text-[13px] text-slate-300">{log.action}</td>
+                <td className="p-4 text-xs text-slate-500 whitespace-nowrap">{formatTime(log)}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan="4" className="p-8 text-center text-slate-500">No logs for this level.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard({ user, onNotify }) {
   const [activeTab, setActiveTab] = useLocalStorage('library_activeTab', 'overview');
@@ -1804,15 +1937,45 @@ export default function Dashboard({ user, onNotify }) {
     setActivityLog(prev => [{ text, type, timestamp: Date.now() }, ...prev].slice(0, 15));
   };
 
+  const [logs, setLogs] = useState(() => {
+    try {
+      const stored = localStorage.getItem('admin_audit_logs');
+      return stored ? JSON.parse(stored) : MOCK_LOGS.map((l, i) => ({ ...l, timestamp: Date.now() - (i * 3600 * 1000) }));
+    } catch {
+      return MOCK_LOGS.map((l, i) => ({ ...l, timestamp: Date.now() - (i * 3600 * 1000) }));
+    }
+  });
+
+  const syncLogs = () => {
+    try {
+      const stored = localStorage.getItem('admin_audit_logs');
+      if (stored) {
+        setLogs(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('storage', syncLogs);
+    window.addEventListener('storage_updated', syncLogs);
+    return () => {
+      window.removeEventListener('storage', syncLogs);
+      window.removeEventListener('storage_updated', syncLogs);
+    };
+  }, []);
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview':     return <Overview onSwitchTab={setActiveTab} issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} members={members} activityLog={activityLog} addActivity={addActivity} />;
-      case 'books':        return <BooksManagementTab books={booksCatalog} setBooks={setBooksCatalog} onNotify={onNotify} />;
-      case 'users':        return <MembersTab members={members} setMembers={setMembers} addActivity={addActivity} />;
-      case 'circulation':  return <Circulation issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} addActivity={addActivity} />;
-      case 'reservations': return <ReservationsTab reservations={reservations} setReservations={setReservations} />;
-      case 'payments':     return <PaymentsTab payments={payments} setPayments={setPayments} />;
+      case 'overview':     return <Overview onSwitchTab={setActiveTab} issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} members={members} logs={logs} user={user} />;
+      case 'books':        return <BooksManagementTab books={booksCatalog} setBooks={setBooksCatalog} onNotify={onNotify} user={user} />;
+      case 'users':        return <MembersTab members={members} setMembers={setMembers} addActivity={addActivity} user={user} />;
+      case 'circulation':  return <Circulation issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} addActivity={addActivity} user={user} />;
+      case 'reservations': return <ReservationsTab reservations={reservations} setReservations={setReservations} user={user} />;
+      case 'payments':     return <PaymentsTab payments={payments} setPayments={setPayments} user={user} />;
       case 'reports':      return <ReportsTab issuedBooks={issuedBooks} members={members} payments={payments} />;
+      case 'logs':         return <LogsTab logs={logs} />;
       default: return null;
     }
   };
@@ -1823,8 +1986,8 @@ export default function Dashboard({ user, onNotify }) {
       <aside className="relative w-64 shrink-0 border-r border-white/5 bg-slate-950/40 backdrop-blur-2xl overflow-y-auto custom-scrollbar shadow-2xl z-20">
         
         {/* Subtle glowing orb in the corner */}
-        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
-        <div className="absolute top-20 -left-10 w-40 h-40 bg-emerald-500/10 blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+        <div className="absolute top-20 -left-10 w-40 h-40 bg-slate-800/10 blur-[80px] pointer-events-none" />
 
         <div className="p-5 relative z-10">
           <div className="mb-8 px-2 pt-3">
@@ -1832,8 +1995,8 @@ export default function Dashboard({ user, onNotify }) {
               {user?.role === 'faculty' ? 'Faculty Portal' : 'Librarian Portal'}
             </h2>
             <div className="flex items-center gap-2 mt-1">
-               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-               <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Library Control</p>
+               <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Library Control</p>
             </div>
           </div>
           

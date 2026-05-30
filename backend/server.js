@@ -1,0 +1,59 @@
+const express = require('express');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+require('dotenv').config();
+const { connectDB } = require('./config/db');
+const seed = require('./seed');
+
+const app = express();
+const PORT = process.env.PORT || 8000;
+
+// Configure CORS to support requests with credentials (cookies)
+app.use(cors({
+  origin: ['http://localhost:3005', 'http://127.0.0.1:3005', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json());
+app.use(cookieParser());
+
+// Register API Routes
+const authRouter = require('./routes/auth');
+const libraryRouter = require('./routes/library');
+
+app.use('/api/auth', authRouter);
+app.use('/api', libraryRouter);
+
+// API root health check
+app.get('/', (req, res) => {
+  return res.json({
+    message: 'LibraryOS Backend API is running ✅ (Node.js/Express MERN Version)',
+    frontend: 'http://localhost:3005',
+    api: '/api/',
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ success: false, message: 'Something went wrong!', error: err.message });
+});
+
+// Database connection and startup sequence
+const startServer = async () => {
+  const mongoUri = await connectDB();
+  
+  // If it's a memory database or local uri, auto-seed the schema
+  if (mongoUri.includes('127.0.0.1') || mongoUri.includes('localhost') || mongoUri.startsWith('mongodb://')) {
+    console.log('Seeding initial mock database tables...');
+    await seed(mongoUri);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+};
+
+startServer();

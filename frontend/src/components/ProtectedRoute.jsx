@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
@@ -21,7 +21,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
                 403 Forbidden
             </h1>
             <p className="text-slate-400 mb-6">Your role ({user.role}) does not have permission to view this directory.</p>
-            <a href="/" className="btn-primary py-2.5 inline-flex justify-center w-full">Return to Safety</a>
+            <Link to="/" className="btn-primary py-2.5 inline-flex justify-center w-full">Return to Safety</Link>
           </div>
         </div>
       );

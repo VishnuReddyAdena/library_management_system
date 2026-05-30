@@ -159,6 +159,7 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
             onChange={e => setEmail(e.target.value)}
             className={`input-field !pl-10 ${errors.email ? 'border-red-500' : ''}`}
             placeholder="you@college.edu"
+            autoComplete="new-email"
           />
         </div>
         {errors.email && <p className="text-red-400 text-xs mt-1 ml-1">{errors.email}</p>}
@@ -177,6 +178,7 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
             onChange={e => setPassword(e.target.value)}
             className={`input-field !pl-10 !pr-10 ${errors.password ? 'border-red-500' : ''}`}
             placeholder="Min. 8 characters"
+            autoComplete="new-password"
           />
           <button
             type="button"
@@ -202,6 +204,7 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
             onChange={e => setConfirm(e.target.value)}
             className={`input-field !pl-10 ${errors.confirm ? 'border-red-500' : ''}`}
             placeholder="Re-enter password"
+            autoComplete="new-password"
           />
         </div>
         {errors.confirm && <p className="text-red-400 text-xs mt-1 ml-1">{errors.confirm}</p>}
@@ -348,7 +351,7 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
             onChange={e => setEmail(e.target.value)}
             className={`input-field !pl-10 ${errors.email ? 'border-red-500' : ''}`}
             placeholder="you@library.edu"
-            autoComplete="off"
+            autoComplete="new-email"
           />
         </div>
         {errors.email && <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.email}</p>}
@@ -367,7 +370,7 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
             onChange={e => setPassword(e.target.value)}
             className={`input-field !pl-10 !pr-10 ${errors.password ? 'border-red-500' : ''}`}
             placeholder="••••••••"
-            autoComplete="off"
+            autoComplete="new-password"
           />
           <button
             type="button"

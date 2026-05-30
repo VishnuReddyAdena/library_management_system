@@ -9,7 +9,7 @@ const PLANS = [
     price:    '₹299',
     period:   '/ year',
     tagline:  'Perfect for undergraduate students',
-    color:    'border-white/10 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/20',
+    color:    'border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5',
     badge:    null,
     features: [
       '5 books simultaneously',
@@ -28,7 +28,7 @@ const PLANS = [
     price:    '₹799',
     period:   '/ year',
     tagline:  'For faculty and researchers',
-    color:    'border-white/10 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/20',
+    color:    'border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5',
     badge:    'Most Popular',
     features: [
       '15 books simultaneously',
@@ -48,7 +48,7 @@ const PLANS = [
     price:    'Custom',
     period:   '',
     tagline:  'For universities and enterprises',
-    color:    'border-purple-500/30 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/20',
+    color:    'border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5',
     badge:    null,
     features: [
       'Unlimited users',
@@ -80,7 +80,7 @@ export default function Pricing({ onGetStarted }) {
     <div className="page-enter max-w-6xl mx-auto px-6 py-16">
       {/* Header */}
       <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-4 py-1.5 text-indigo-400 text-sm font-medium mb-6">
+        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-slate-300 text-sm font-medium mb-6">
           <Zap className="w-4 h-4" />Simple, Transparent Pricing
         </div>
         <h1 className="text-5xl font-bold text-white mb-4">

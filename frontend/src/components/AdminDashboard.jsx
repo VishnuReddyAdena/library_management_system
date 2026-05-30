@@ -7,6 +7,7 @@ import {
   RotateCcw, Ban, Unlock, Mail, Phone, Calendar, Hash, Download
 } from 'lucide-react';
 import GlassSelect from './GlassSelect';
+import { addAuditLog } from '../utils/auditLogger';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK_LIBRARIANS = [
@@ -72,8 +73,8 @@ const TABS = [
   { id: 'analytics', label: 'Analytics',  icon: BarChart2     },
   { id: 'users',     label: 'User Management', icon: Users         },
   { id: 'roles',     label: 'Roles',      icon: Shield        },
-  { id: 'settings',  label: 'Settings',   icon: Settings      },
   { id: 'logs',      label: 'Audit Logs', icon: FileText      },
+  { id: 'settings',  label: 'Settings',   icon: Settings      },
 ];
 
 // ─── Component specific mock data ───
@@ -104,7 +105,7 @@ const USER_GROWTH = [
 ];
 
 // ─── Dashboard Tab ────────────────────────────────────────────────────────────
-function DashboardTab({ librarians, darkMode }) {
+function DashboardTab({ librarians, darkMode, logs, setActiveTab }) {
   const maxIssued = Math.max(...MONTHLY_USAGE.map(m => Math.max(m.issued, m.returned)));
 
   return (
@@ -232,7 +233,7 @@ function DashboardTab({ librarians, darkMode }) {
         {/* Popular Categories */}
         <div className="card-glass p-6">
           <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-6 flex items-center gap-2">
-            <Database className="w-5 h-5 text-purple-400" /> Most Borrowed Categories
+            <Database className="w-5 h-5 text-white" /> Most Borrowed Categories
           </h3>
           <div className="space-y-4">
             {POPULAR_CATEGORIES.map((cat, idx) => {
@@ -242,11 +243,11 @@ function DashboardTab({ librarians, darkMode }) {
                 <div key={cat.name} className="relative group">
                   <div className="flex justify-between text-[11px] font-bold text-slate-400 mb-1.5">
                     <span className="group-hover:text-white transition-colors">{idx + 1}. {cat.name}</span>
-                    <span className="text-purple-400">{cat.count} loans</span>
+                    <span className="text-slate-300">{cat.count} loans</span>
                   </div>
                   <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
                     <div 
-                      className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(168,85,247,0.4)]" 
+                      className="h-full bg-gradient-to-r from-slate-400 to-slate-200 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(255,255,255,0.05)]" 
                       style={{ width: `${pct}%` }} 
                     />
                   </div>
@@ -259,22 +260,35 @@ function DashboardTab({ librarians, darkMode }) {
         {/* Activity Feed */}
         <div className="card-glass p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-400 animate-pulse" /> Live Activity Feed
+            <h3 className="text-sm font-bold text-red-500 tracking-wider flex items-center gap-2">
+              <span className="text-red-500 animate-pulse text-base leading-none">●</span> Live Activity
             </h3>
-            <button className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-full transition-colors">
+            <button 
+              onClick={() => setActiveTab('logs')}
+              className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-full transition-colors"
+            >
               View All Logs
             </button>
           </div>
           <div className="space-y-1 flex-1 overflow-y-auto pr-2">
-            {MOCK_LOGS.slice(0, 5).map((log, i) => {
+            {(logs || []).slice(0, 5).map((log, i) => {
               const styles = { 
                 success: { icon: CheckCircle, colors: 'text-emerald-400 bg-emerald-500/10' }, 
                 error:   { icon: XCircle,     colors: 'text-red-400 bg-red-500/10' }, 
                 warning: { icon: AlertCircle, colors: 'text-amber-400 bg-amber-500/10' }, 
                 info:    { icon: FileText,    colors: 'text-blue-400 bg-blue-500/10' } 
-              }[log.level];
+              }[log.level] || { icon: FileText, colors: 'text-blue-400 bg-blue-500/10' };
               const Icon = styles.icon;
+              const formatTime = (l) => {
+                if (l.timestamp) {
+                  const diff = Math.floor((Date.now() - l.timestamp) / 60000);
+                  if (diff < 1) return 'Just now';
+                  if (diff < 60) return `${diff}m ago`;
+                  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+                  return `${Math.floor(diff / 1440)}d ago`;
+                }
+                return l.time;
+              };
               return (
                 <div key={log.id} className="flex gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors relative">
                   {i !== 4 && <div className="absolute left-[27px] top-10 bottom-0 w-[1px] bg-white/10" />}
@@ -286,7 +300,7 @@ function DashboardTab({ librarians, darkMode }) {
                     <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
                       <span className="text-slate-400">{log.user}</span>
                       <span className="w-1 h-1 rounded-full bg-slate-700" />
-                      <span>{log.time}</span>
+                      <span>{formatTime(log)}</span>
                     </div>
                   </div>
                 </div>
@@ -300,23 +314,106 @@ function DashboardTab({ librarians, darkMode }) {
 }
 
 // ─── Analytics Tab ────────────────────────────────────────────────────────────
-function AnalyticsTab() {
+function AnalyticsTab({ logs }) {
   const [timeframe, setTimeframe] = useState('30 Days');
   const [activeDonut, setActiveDonut] = useState(null);
 
   // Timeframe Data scaling multiplier to simulate real API metrics fetching
   const tMult = timeframe === 'Last 7 Days' ? 0.25 : timeframe === '30 Days' ? 1 : 12;
 
-  // Global Stat Cards
-  const totalIssued = Math.floor(MONTHLY_USAGE.reduce((a, b) => a + b.issued, 0) * tMult);
-  const totalFines = Math.floor(FINE_COLLECTION.reduce((a, b) => a + b.amount, 0) * tMult);
-  const avgReturn = Math.min(100, Math.round((MONTHLY_USAGE.reduce((a, b) => a + b.returned, 0) / MONTHLY_USAGE.length) + (tMult * 2)));
+  // Filter logs within timeframe
+  const filteredLogs = useMemo(() => {
+    const now = Date.now();
+    let limit = Infinity;
+    if (timeframe === 'Last 7 Days') {
+      limit = 7 * 24 * 60 * 60 * 1000;
+    } else if (timeframe === '30 Days') {
+      limit = 30 * 24 * 60 * 60 * 1000;
+    }
+    return (logs || []).filter(l => {
+      if (!l.timestamp) return true;
+      return (now - l.timestamp) <= limit;
+    });
+  }, [logs, timeframe]);
+
+  // Dynamic calculations from filtered logs
+  const dynamicMetrics = useMemo(() => {
+    const baseIssued = Math.floor(453 * tMult);
+    const baseFines = Math.floor(11820 * tMult);
+    const baseReturned = Math.floor(439 * tMult);
+
+    let logIssues = 0;
+    let logFines = 0;
+    let logReturns = 0;
+
+    filteredLogs.forEach(l => {
+      const action = l.action || '';
+      // Count issues
+      if (action.includes('Issued book') || action.includes('Student borrowed book') || action.includes('borrowed book') || action.includes('Reversed return')) {
+        logIssues += 1;
+      } else {
+        const match = action.match(/Issued (\d+) books/);
+        if (match) {
+          logIssues += parseInt(match[1], 10);
+        }
+      }
+
+      // Count paid fines
+      if (action.includes('paid fine') || action.includes('Verified payment') || (action.includes('payment of') && !action.includes('waived') && !action.includes('rate'))) {
+        const match = action.match(/₹(\d+)/);
+        if (match) {
+          logFines += parseInt(match[1], 10);
+        }
+      }
+
+      // Count returns
+      if (action.includes('Returned book') || action.includes('Student returned book') || action.includes('returned book')) {
+        logReturns += 1;
+      }
+    });
+
+    const totalIssued = baseIssued + logIssues;
+    const totalFines = baseFines + logFines;
+    const totalReturned = baseReturned + logReturns;
+    const returnRate = totalIssued > 0 ? Math.min(100, Math.round((totalReturned / totalIssued) * 100)) : 0;
+
+    // Peak Usage Slot
+    const counts = { 'Wed 2PM': 3, 'Tue 10AM': 2, 'Thu 4PM': 2 };
+    filteredLogs.forEach(log => {
+      if (log.timestamp) {
+        const d = new Date(log.timestamp);
+        const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+        let hour = d.getHours();
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        hour = hour ? hour : 12;
+        const slot = `${day} ${hour}${ampm}`;
+        counts[slot] = (counts[slot] || 0) + 1;
+      }
+    });
+
+    let peakUsage = 'Wed 2PM';
+    let maxCount = 0;
+    Object.entries(counts).forEach(([slot, cnt]) => {
+      if (cnt > maxCount) {
+        maxCount = cnt;
+        peakUsage = slot;
+      }
+    });
+
+    return {
+      totalIssued,
+      totalFines,
+      returnRate,
+      peakUsage
+    };
+  }, [filteredLogs, tMult]);
 
   // Dynamic Conic Gradient elements for Donut Chart
   const inventory = useMemo(() => {
     const raw = [
       { label: 'Available', val: Math.max(10, 65 - Math.floor(tMult * 3)), color: '#3b82f6', tw: 'blue' },
-      { label: 'Issued',    val: Math.min(60, 28 + Math.floor(tMult * 2.5)), color: '#8b5cf6', tw: 'purple' },
+      { label: 'Issued',    val: Math.min(60, 28 + Math.floor(tMult * 2.5)), color: '#94a3b8', tw: 'slate' },
       { label: 'Overdue',   val: 7 + Math.floor(tMult * 0.5), color: '#f43f5e', tw: 'rose' }
     ];
     // Normalize to 100% exactly
@@ -347,14 +444,14 @@ function AnalyticsTab() {
     <div className="space-y-8 animate-fade-in relative z-10 pb-16">
       
       {/* Hyper-Premium Header */}
-      <div className="relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-rose-500/30 shadow-[0_0_40px_rgba(139,92,246,0.15)]">
+      <div className="relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-r from-white/10 via-slate-500/10 to-white/10 shadow-[0_0_40px_rgba(255,255,255,0.05)]">
         <div className="bg-slate-950/90 backdrop-blur-2xl rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           {/* Subtle background glow inside header */}
-          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-24 bg-purple-500/20 blur-[100px] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-24 bg-slate-800/10 blur-[100px] pointer-events-none" />
           
           <div className="flex gap-4 items-center pl-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 border border-white/20">
-              <Activity className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-slate-300 flex items-center justify-center shadow-lg border border-white/20">
+              <Activity className="w-6 h-6 text-slate-950" />
             </div>
             <div>
               <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight">Analysis</h2>
@@ -379,10 +476,10 @@ function AnalyticsTab() {
       {/* Floating Nano-Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         {[
-          { label: 'Gross Revenue', value: `₹${totalFines.toLocaleString()}`, trend: '+14.2%', icon: Zap,      c1: 'from-emerald-500/20', c2: 'to-emerald-900/5', color: 'text-emerald-400', border: 'border-emerald-500/20' },
-          { label: 'Circulation',   value: totalIssued.toLocaleString(),      trend: '+8.5%',  icon: Hash,     c1: 'from-blue-500/20',     c2: 'to-blue-900/5',    color: 'text-blue-400',    border: 'border-blue-500/20' },
-          { label: 'Return Rate',   value: `${Math.round((avgReturn/(totalIssued/7))*100)}%`, trend: '-1.2%', icon: RotateCcw, c1: 'from-purple-500/20',   c2: 'to-purple-900/5',  color: 'text-purple-400',  border: 'border-purple-500/20' },
-          { label: 'Peak Usage',    value: 'Wed 2PM',                         trend: 'High',   icon: Activity, c1: 'from-rose-500/20',     c2: 'to-rose-900/5',    color: 'text-rose-400',    border: 'border-rose-500/20' }
+          { label: 'Gross Revenue', value: `₹${dynamicMetrics.totalFines.toLocaleString()}`, trend: '+14.2%', icon: Zap,      c1: 'from-emerald-500/20', c2: 'to-emerald-900/5', color: 'text-emerald-400', border: 'border-emerald-500/20' },
+          { label: 'Circulation',   value: dynamicMetrics.totalIssued.toLocaleString(),      trend: '+8.5%',  icon: Hash,     c1: 'from-blue-500/20',     c2: 'to-blue-900/5',    color: 'text-blue-400',    border: 'border-blue-500/20' },
+          { label: 'Return Rate',   value: `${dynamicMetrics.returnRate}%`, trend: '-1.2%', icon: RotateCcw, c1: 'from-slate-500/20',   c2: 'to-slate-900/5',  color: 'text-slate-300',  border: 'border-slate-500/20' },
+          { label: 'Peak Usage',    value: dynamicMetrics.peakUsage,                         trend: 'High',   icon: Activity, c1: 'from-rose-500/20',     c2: 'to-rose-900/5',    color: 'text-rose-400',    border: 'border-rose-500/20' }
         ].map((s, i) => (
           <div key={i} className={`relative group rounded-3xl bg-slate-900/40 border ${s.border} backdrop-blur-md p-6 hover:-translate-y-1 hover:shadow-2xl hover:shadow-${s.color.split('-')[1]}-500/10 transition-all duration-500 overflow-hidden`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.c1} ${s.c2} opacity-50 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -454,7 +551,7 @@ function AnalyticsTab() {
                            
                            {/* New Signups Column */}
                            <div className="w-full max-w-[20px] bg-slate-800/80 rounded-t-xl relative overflow-hidden h-full border border-b-0 border-white/5">
-                             <div className="absolute bottom-0 w-full bg-gradient-to-t from-indigo-700 to-indigo-400 rounded-t-xl transition-all duration-700 shadow-lg group-hover:from-indigo-600 group-hover:to-indigo-300"
+                             <div className="absolute bottom-0 w-full bg-gradient-to-t from-slate-600 to-slate-400 rounded-t-xl transition-all duration-700 shadow-lg group-hover:from-slate-500 group-hover:to-slate-300"
                                   style={{ height: `${newPct}%` }} />
                            </div>
 
@@ -679,7 +776,7 @@ function AnalyticsTab() {
 }
 
 // ─── Roles Tab ────────────────────────────────────────────────────────────────
-function RolesTab({ librarians, setLibrarians, onNotify }) {
+function RolesTab({ librarians, setLibrarians, onNotify, addLog }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', role: 'Librarian' });
 
@@ -692,12 +789,14 @@ function RolesTab({ librarians, setLibrarians, onNotify }) {
     setShowAddModal(false);
     setForm({ name: '', email: '', role: 'Librarian' });
     if (onNotify) onNotify(`Librarian ${form.name} added successfully.`);
+    if (addLog) addLog(`Added new librarian ${form.name} (${form.role})`, 'success', 'Admin');
   };
 
   const handleRemove = (id) => {
     const target = librarians.find(l => l.id === id);
     setLibrarians(librarians.filter(l => l.id !== id));
     if (onNotify) onNotify(`${target?.name} has been removed from the system.`);
+    if (addLog) addLog(`Removed librarian ${target?.name} (${target?.role})`, 'warning', 'Admin');
   };
 
   return (
@@ -780,10 +879,53 @@ function RolesTab({ librarians, setLibrarians, onNotify }) {
 }
 
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
-function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode }) {
+function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode, addLog }) {
+  const [localSettings, setLocalSettings] = useState({ ...settings });
+
+  useEffect(() => {
+    setLocalSettings({ ...settings });
+  }, [settings]);
+
   const handleSave = (e) => {
     e.preventDefault();
-    if (onNotify) onNotify('Global system settings saved successfully.');
+
+    const fieldNames = {
+      fineRate: 'Fine rate',
+      maxBooksStudent: 'Max books for students',
+      maxBooksFaculty: 'Max books for faculty',
+      borrowDurationStudent: 'Borrow duration for students',
+      borrowDurationFaculty: 'Borrow duration for faculty',
+      globalMaxBooks: 'Global max books limit',
+      reservationExpiry: 'Reservation expiry duration',
+    };
+
+    const changes = [];
+    Object.keys(localSettings).forEach(key => {
+      const prevVal = settings[key];
+      const newVal = localSettings[key];
+      if (String(prevVal) !== String(newVal)) {
+        const fieldName = fieldNames[key] || key;
+        let changeText = '';
+        if (key === 'fineRate') {
+          changeText = `Updated ${fieldName} from ₹${prevVal}/day to ₹${newVal}/day`;
+        } else if (key.includes('Duration') || key.includes('Expiry')) {
+          changeText = `Updated ${fieldName} from ${prevVal} days to ${newVal} days`;
+        } else {
+          changeText = `Updated ${fieldName} from ${prevVal} to ${newVal}`;
+        }
+        changes.push(changeText);
+      }
+    });
+
+    if (changes.length > 0) {
+      setSettings({ ...localSettings });
+      changes.forEach(changeText => {
+        if (addLog) addLog(changeText, 'info', 'Admin');
+      });
+      if (onNotify) onNotify(`Successfully updated ${changes.length} setting(s).`);
+    } else {
+      if (onNotify) onNotify('No settings were changed.', 'info');
+    }
   };
 
   return (
@@ -801,8 +943,8 @@ function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode })
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Fine Per Day (₹)</label>
-              <input type="number" min="1" value={settings.fineRate}
-                onChange={e => setSettings({...settings, fineRate: e.target.value})}
+              <input type="number" min="1" value={localSettings.fineRate}
+                onChange={e => setLocalSettings({...localSettings, fineRate: e.target.value})}
                 className="input-field py-2" />
             </div>
           </div>
@@ -816,26 +958,26 @@ function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode })
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Max Books — Student</label>
-              <input type="number" min="1" value={settings.maxBooksStudent}
-                onChange={e => setSettings({...settings, maxBooksStudent: e.target.value})}
+              <input type="number" min="1" value={localSettings.maxBooksStudent}
+                onChange={e => setLocalSettings({...localSettings, maxBooksStudent: e.target.value})}
                 className="input-field py-2" />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Max Books — Faculty</label>
-              <input type="number" min="1" value={settings.maxBooksFaculty}
-                onChange={e => setSettings({...settings, maxBooksFaculty: e.target.value})}
+              <input type="number" min="1" value={localSettings.maxBooksFaculty}
+                onChange={e => setLocalSettings({...localSettings, maxBooksFaculty: e.target.value})}
                 className="input-field py-2" />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Borrow Duration — Student (Days)</label>
-              <input type="number" min="1" value={settings.borrowDurationStudent}
-                onChange={e => setSettings({...settings, borrowDurationStudent: e.target.value})}
+              <input type="number" min="1" value={localSettings.borrowDurationStudent}
+                onChange={e => setLocalSettings({...localSettings, borrowDurationStudent: e.target.value})}
                 className="input-field py-2" />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Borrow Duration — Faculty (Days)</label>
-              <input type="number" min="1" value={settings.borrowDurationFaculty}
-                onChange={e => setSettings({...settings, borrowDurationFaculty: e.target.value})}
+              <input type="number" min="1" value={localSettings.borrowDurationFaculty}
+                onChange={e => setLocalSettings({...localSettings, borrowDurationFaculty: e.target.value})}
                 className="input-field py-2" />
             </div>
           </div>
@@ -849,14 +991,14 @@ function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode })
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Global Max Books</label>
-              <input type="number" min="1" value={settings.globalMaxBooks || 20}
-                onChange={e => setSettings({...settings, globalMaxBooks: e.target.value})}
+              <input type="number" min="1" value={localSettings.globalMaxBooks || 20}
+                onChange={e => setLocalSettings({...localSettings, globalMaxBooks: e.target.value})}
                 className="input-field py-2" />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-widest">Reservation Expiry (Days)</label>
-              <input type="number" min="1" value={settings.reservationExpiry || 7}
-                onChange={e => setSettings({...settings, reservationExpiry: e.target.value})}
+              <input type="number" min="1" value={localSettings.reservationExpiry || 7}
+                onChange={e => setLocalSettings({...localSettings, reservationExpiry: e.target.value})}
                 className="input-field py-2" />
             </div>
           </div>
@@ -864,7 +1006,7 @@ function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode })
 
         <div className="flex justify-end">
           <button type="submit" className="btn-primary py-3 px-8 text-base">
-            <CheckCircle className="w-4 h-4" /> Save Master Settings
+            <CheckCircle className="w-4 h-4" /> Save Settings
           </button>
         </div>
       </form>
@@ -872,8 +1014,7 @@ function SettingsTab({ settings, setSettings, onNotify, darkMode, setDarkMode })
   );
 }
 
-// ─── Audit Logs Tab ───────────────────────────────────────────────────────────
-function LogsTab() {
+function LogsTab({ logs }) {
   const [filter, setFilter] = useState('all');
 
   const colors = {
@@ -883,7 +1024,18 @@ function LogsTab() {
     info:    { badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30',           dot: 'bg-blue-500'    },
   };
 
-  const filtered = filter === 'all' ? MOCK_LOGS : MOCK_LOGS.filter(l => l.level === filter);
+  const filtered = filter === 'all' ? logs : logs.filter(l => l.level === filter);
+
+  const formatTime = (l) => {
+    if (l.timestamp) {
+      const diff = Math.floor((Date.now() - l.timestamp) / 60000);
+      if (diff < 1) return 'Just now';
+      if (diff < 60) return `${diff}m ago`;
+      if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+      return `${Math.floor(diff / 1440)}d ago`;
+    }
+    return l.time;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -916,8 +1068,8 @@ function LogsTab() {
                   </span>
                 </td>
                 <td className="p-4 text-sm font-bold text-white">{log.user}</td>
-                <td className="p-4 text-sm text-slate-300">{log.action}</td>
-                <td className="p-4 text-xs text-slate-500 whitespace-nowrap">{log.time}</td>
+                <td className="p-4 text-[13px] text-slate-300">{log.action}</td>
+                <td className="p-4 text-xs text-slate-500 whitespace-nowrap">{formatTime(log)}</td>
               </tr>
             ))}
             {filtered.length === 0 && (
@@ -931,7 +1083,7 @@ function LogsTab() {
 }
 
 // ─── Users Management Tab ────────────────────────────────────────────────────
-function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNotify }) {
+function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNotify, addLog }) {
   const [userType, setUserType]       = useState('students');
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -970,6 +1122,7 @@ function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNoti
       if (u.id !== id) return u;
       const next = u.status === 'Active' ? 'Suspended' : 'Active';
       if (onNotify) onNotify(`${u.name} status changed to ${next}.`);
+      if (addLog) addLog(`Changed status of user ${u.name} (${u.id}) to ${next}`, next === 'Active' ? 'success' : 'warning', 'Admin');
       return { ...u, status: next };
     }));
     if (selected?.id === id) setSelected(s => ({ ...s, status: s.status === 'Active' ? 'Suspended' : 'Active' }));
@@ -993,6 +1146,7 @@ function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNoti
     if (selected?.id === u.id) setSelected(null);
     setConfirmDelete(null);
     if (onNotify) onNotify(`${u.name} removed from system.`);
+    if (addLog) addLog(`Deleted user ${u.name} (${u.id})`, 'error', 'Admin');
   };
 
   const handleUndo = () => {
@@ -1002,12 +1156,15 @@ function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNoti
     else setFaculty(prev => [...prev, userData]);
     setRecentlyDeleted(null);
     if (onNotify) onNotify(`${userData.name} restored successfully.`);
+    if (addLog) addLog(`Restored user ${userData.name} (${userData.id})`, 'success', 'Admin');
   };
 
   const waiveFine = (id) => {
+    const u = data.find(x => x.id === id);
     setData(data.map(u => u.id === id ? { ...u, finesPending: 0 } : u));
     if (selected?.id === id) setSelected(s => ({ ...s, finesPending: 0 }));
     if (onNotify) onNotify('Pending fine waived successfully.');
+    if (addLog) addLog(`Waived fine for user ${u?.name} (${u?.id})`, 'success', 'Admin');
   };
 
   const saveEdit = (e) => {
@@ -1016,6 +1173,7 @@ function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNoti
     if (selected?.id === editTarget.id) setSelected({ ...editTarget });
     setEditTarget(null);
     if (onNotify) onNotify('User details updated successfully.');
+    if (addLog) addLog(`Updated details for user ${editTarget.name} (${editTarget.id})`, 'info', 'Admin');
   };
 
   const handleAdd = (e) => {
@@ -1030,6 +1188,7 @@ function UsersManagementTab({ students, setStudents, faculty, setFaculty, onNoti
     setShowAdd(false);
     setAddForm({});
     if (onNotify) onNotify(`${newUser.name} added successfully.`);
+    if (addLog) addLog(`Registered new user ${newUser.name} (${newId})`, 'success', 'Admin');
   };
 
   const statusBadge = (s) => s === 'Active'
@@ -1422,14 +1581,47 @@ export default function AdminDashboard({ user, onNotify }) {
     reservationExpiry: 7,
   });
 
+  const [logs, setLogs] = useState(() => {
+    try {
+      const stored = localStorage.getItem('admin_audit_logs');
+      return stored ? JSON.parse(stored) : MOCK_LOGS.map((l, i) => ({ ...l, timestamp: Date.now() - (i * 3600 * 1000) }));
+    } catch {
+      return MOCK_LOGS.map((l, i) => ({ ...l, timestamp: Date.now() - (i * 3600 * 1000) }));
+    }
+  });
+
+  const syncLogs = () => {
+    try {
+      const stored = localStorage.getItem('admin_audit_logs');
+      if (stored) {
+        setLogs(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('storage', syncLogs);
+    window.addEventListener('storage_updated', syncLogs);
+    return () => {
+      window.removeEventListener('storage', syncLogs);
+      window.removeEventListener('storage_updated', syncLogs);
+    };
+  }, []);
+
+  const addLog = (action, level = 'info', user = 'System') => {
+    addAuditLog(action, level, user);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardTab librarians={librarians} darkMode={darkMode} />;
-      case 'analytics': return <AnalyticsTab />;
-      case 'users':     return <UsersManagementTab students={students} setStudents={setStudents} faculty={faculty} setFaculty={setFaculty} onNotify={onNotify} />;
-      case 'roles':     return <RolesTab librarians={librarians} setLibrarians={setLibrarians} onNotify={onNotify} />;
-      case 'settings':  return <SettingsTab settings={settings} setSettings={setSettings} onNotify={onNotify} darkMode={darkMode} setDarkMode={setDarkMode} />;
-      case 'logs':      return <LogsTab />;
+      case 'dashboard': return <DashboardTab librarians={librarians} darkMode={darkMode} logs={logs} setActiveTab={setActiveTab} />;
+      case 'analytics': return <AnalyticsTab logs={logs} />;
+      case 'users':     return <UsersManagementTab students={students} setStudents={setStudents} faculty={faculty} setFaculty={setFaculty} onNotify={onNotify} addLog={addLog} />;
+      case 'roles':     return <RolesTab librarians={librarians} setLibrarians={setLibrarians} onNotify={onNotify} addLog={addLog} />;
+      case 'settings':  return <SettingsTab settings={settings} setSettings={setSettings} onNotify={onNotify} darkMode={darkMode} setDarkMode={setDarkMode} addLog={addLog} />;
+      case 'logs':      return <LogsTab logs={logs} />;
       default: return null;
     }
   };
@@ -1440,8 +1632,8 @@ export default function AdminDashboard({ user, onNotify }) {
       <aside className="relative w-64 shrink-0 border-r border-white/5 bg-slate-950/40 backdrop-blur-2xl overflow-y-auto custom-scrollbar shadow-2xl z-20">
         
         {/* Subtle glowing orb in the corner */}
-        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
-        <div className="fixed top-20 -left-10 w-40 h-40 bg-purple-500/20 blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+        <div className="fixed top-20 -left-10 w-40 h-40 bg-slate-800/10 blur-[80px] pointer-events-none" />
 
         <div className="p-5 relative z-10">
           <div className="mb-8 px-2 pt-3">
@@ -1449,8 +1641,8 @@ export default function AdminDashboard({ user, onNotify }) {
               Admin Portal
             </h2>
             <div className="flex items-center gap-2 mt-1">
-               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />
-               <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">System Control</p>
+               <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Control</p>
             </div>
           </div>
           
