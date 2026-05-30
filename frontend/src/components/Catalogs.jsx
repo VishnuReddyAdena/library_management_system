@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, BookOpen, ChevronDown, X, Star, Users, Clock } from 'lucide-react';
+import { addAuditLog } from '../utils/auditLogger';
 
 function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => {
@@ -48,13 +49,13 @@ function BookCard({ book, onPlaceHold }) {
   return (
     <div className="card-glass p-6 hover:bg-white/8 transition-all group flex gap-5">
       {/* Cover placeholder */}
-      <div className="w-20 h-28 flex-shrink-0 bg-gradient-to-br from-indigo-600/40 to-purple-600/40 rounded-xl flex items-center justify-center border border-white/10">
-        <BookOpen className="w-8 h-8 text-indigo-300 opacity-70" />
+      <div className="w-20 h-28 flex-shrink-0 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center border border-white/10">
+        <BookOpen className="w-8 h-8 text-slate-400 opacity-70" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="font-semibold text-white text-base leading-snug mb-0.5 group-hover:text-indigo-300 transition-colors truncate">{book.title}</h3>
+            <h3 className="font-semibold text-white text-base leading-snug mb-0.5 group-hover:text-slate-300 transition-colors truncate">{book.title}</h3>
             <p className="text-slate-400 text-sm truncate">by <span className="text-slate-300">{book.author}</span></p>
           </div>
           <span className={`badge border ${cfg.cls} flex-shrink-0 flex items-center gap-1.5`}>
@@ -64,7 +65,7 @@ function BookCard({ book, onPlaceHold }) {
         </div>
 
         <div className="flex flex-wrap gap-2 mt-3">
-          <span className="bg-indigo-500/10 text-indigo-300 text-xs px-2 py-0.5 rounded-full border border-indigo-500/20">{book.category}</span>
+          <span className="bg-white/5 text-slate-300 text-xs px-2 py-0.5 rounded-full border border-white/10">{book.category}</span>
           <span className="bg-white/5 text-slate-400 text-xs px-2 py-0.5 rounded-full border border-white/10">ISBN: {book.isbn}</span>
           <span className="bg-white/5 text-slate-400 text-xs px-2 py-0.5 rounded-full border border-white/10">Ed. {book.edition}</span>
         </div>
@@ -113,6 +114,7 @@ export default function Catalogs({ user, onNotify }) {
       return;
     }
     if (onNotify) onNotify(`Hold placed for "${book.title}"`);
+    addAuditLog(`Placed hold on book "${book.title}" (ISBN: ${book.isbn})`, 'info', user?.name || user?.email || 'User');
   };
 
   const hasFilters = query || category !== 'All' || language !== 'All' || availability !== 'All';
@@ -188,7 +190,7 @@ export default function Catalogs({ user, onNotify }) {
         <div className="text-center py-24">
           <BookOpen className="w-16 h-16 text-slate-700 mx-auto mb-4" />
           <p className="text-slate-400 text-lg font-medium">No books match your search</p>
-          <button onClick={clearFilters} className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm">Clear filters</button>
+          <button onClick={clearFilters} className="mt-4 text-slate-300 hover:text-white underline text-sm">Clear filters</button>
         </div>
       )}
     </div>

@@ -34,10 +34,10 @@ function Navbar({ user, onLogout }) {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-            <BookOpen className="w-4.5 h-4.5 text-white w-5 h-5" />
+          <div className="w-8 h-8 bg-gradient-to-br from-white to-slate-300 rounded-lg flex items-center justify-center shadow-md">
+            <BookOpen className="w-4.5 h-4.5 text-slate-950 w-5 h-5" />
           </div>
-          <span className="font-bold text-white text-lg tracking-tight">Library<span className="text-indigo-400">OS</span></span>
+          <span className="font-bold text-white text-lg tracking-tight">Library<span className="text-slate-300">OS</span></span>
         </Link>
 
         {/* Desktop Nav */}
@@ -77,7 +77,7 @@ function Navbar({ user, onLogout }) {
               <Link
                 to="/profile"
                 title="View Profile"
-                className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow-md hover:scale-105 hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 hover:ring-offset-slate-950 transition-all cursor-pointer flex-shrink-0"
+                className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-white to-slate-300 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md hover:scale-105 hover:ring-2 hover:ring-white hover:ring-offset-2 hover:ring-offset-slate-950 transition-all cursor-pointer flex-shrink-0"
               >
                 {isAuth && user?.avatar ? (
                   <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
@@ -100,7 +100,7 @@ function Navbar({ user, onLogout }) {
           {isAuth && (
             <Link
               to="/profile"
-              className="w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow-md flex-shrink-0"
+              className="w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-white to-slate-300 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md flex-shrink-0"
             >
               {user?.avatar
                 ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
@@ -128,7 +128,7 @@ function Navbar({ user, onLogout }) {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 py-3 mb-2 border-b border-white/10"
             >
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-white to-slate-300 flex items-center justify-center font-bold text-slate-950 flex-shrink-0">
                 {user?.avatar
                   ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
                   : (user?.name?.charAt(0) || 'U')
@@ -205,7 +205,7 @@ function Footer({ user }) {
     <footer className="border-t border-white/10 bg-slate-950">
       <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-indigo-400" />
+          <BookOpen className="w-5 h-5 text-white" />
           <span className="font-bold text-white text-base tracking-tight">LibraryOS</span>
         </Link>
         
@@ -251,14 +251,14 @@ function AppContent() {
       const jwtData = localStorage.getItem('user_data');
       if (jwtData) {
         const u = JSON.parse(jwtData);
-        const avatar = localStorage.getItem('lms_avatar');
+        const avatar = localStorage.getItem(u.email + '_lms_avatar');
         return avatar ? { ...u, avatar } : u;
       }
       // Fallback: legacy lms_user key
       const stored = localStorage.getItem('lms_user');
       if (!stored) return null;
       const u = JSON.parse(stored);
-      const avatar = localStorage.getItem('lms_avatar');
+      const avatar = localStorage.getItem(u.email + '_lms_avatar');
       return avatar ? { ...u, avatar } : u;
     } catch { return null; }
   });
@@ -269,15 +269,15 @@ function AppContent() {
   const handleAuthSuccess = (userData) => {
     // userData is the user object from the JWT login response
     if (!userData) return;
-    const avatar = localStorage.getItem('lms_avatar');
+    const avatar = localStorage.getItem(userData.email + '_lms_avatar');
     const newUser = avatar ? { ...userData, avatar } : { ...userData };
 
     // Keep lms_user in sync so legacy components still work
     const { avatar: _a, ...userWithoutAvatar } = newUser;
     try { localStorage.setItem('lms_user', JSON.stringify(userWithoutAvatar)); } catch { /* quota */ }
-    if (newUser.name)  localStorage.setItem('lms_p_name',  newUser.name);
-    if (newUser.email) localStorage.setItem('lms_p_email', newUser.email);
-    if (newUser.role)  localStorage.setItem('lms_p_role',  newUser.role);
+    if (newUser.name)  localStorage.setItem(newUser.email + '_lms_p_name',  newUser.name);
+    if (newUser.email) localStorage.setItem(newUser.email + '_lms_p_email', newUser.email);
+    if (newUser.role)  localStorage.setItem(newUser.email + '_lms_p_role',  newUser.role);
 
     setUser(newUser);
   };
@@ -288,12 +288,6 @@ function AppContent() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
     localStorage.removeItem('lms_user');
-    localStorage.removeItem('lms_p_name');
-    localStorage.removeItem('lms_p_email');
-    localStorage.removeItem('lms_p_phone');
-    localStorage.removeItem('lms_p_loc');
-    localStorage.removeItem('lms_p_role');
-    localStorage.removeItem('lms_avatar');
     setToast('You have been signed out.');
     navigate('/');
   };

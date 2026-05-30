@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, AlertCircle, Clock, CheckCircle, CreditCard, Search, LayoutDashboard, Bookmark, History, RotateCcw, XCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { addAuditLog } from '../utils/auditLogger';
 
 // MOCK DATA
 const MOCK_LOANS = [
@@ -59,17 +60,21 @@ export default function StudentDashboard({ user, onNotify }) {
     setLoans(loans.filter(l => l.id !== loan.id));
     setHistory([{ id: Date.now(), title: loan.title, issuedOn: loan.issuedOn, returnedOn: new Date().toISOString().split('T')[0], status: 'Returned' }, ...history]);
     if (onNotify) onNotify(`Successfully returned ${loan.title}.`, 'success');
+    addAuditLog(`Student returned book "${loan.title}" (ISBN: ${loan.isbn})`, 'success', user?.name || user?.email || 'Student');
   };
 
   const handleCancelReservation = (id) => {
+    const res = reservations.find(r => r.id === id);
     setReservations(reservations.filter(r => r.id !== id));
     if (onNotify) onNotify('Reservation cancelled successfully.', 'success');
+    addAuditLog(`Student cancelled reservation for "${res?.title || 'book'}"`, 'warning', user?.name || user?.email || 'Student');
   };
 
   const processPayment = (loanId, amount) => {
     setLoans(loans.map(l => l.id === loanId ? { ...l, fine: 0, status: 'Active' } : l));
     setPayments([{ txId: `TXN-${Math.floor(Math.random()*10000)}`, amount, date: new Date().toISOString().split('T')[0], status: 'Success' }, ...payments]);
     if (onNotify) onNotify(`Payment of ₹${amount} successful via Razorpay Sandbox.`, 'success');
+    addAuditLog(`Student paid fine of ₹${amount} for book ID ${loanId}`, 'success', user?.name || user?.email || 'Student');
   };
 
   const handleBorrow = (book) => {
@@ -85,6 +90,7 @@ export default function StudentDashboard({ user, onNotify }) {
     };
     setLoans([...loans, newLoan]);
     if (onNotify) onNotify(`Successfully borrowed ${book.title}.`, 'success');
+    addAuditLog(`Student borrowed book "${book.title}" (ISBN: ${book.isbn})`, 'success', user?.name || user?.email || 'Student');
   };
 
   const handleReserve = (book) => {
@@ -98,6 +104,7 @@ export default function StudentDashboard({ user, onNotify }) {
     };
     setReservations([...reservations, newRes]);
     if (onNotify) onNotify(`Successfully reserved ${book.title}. You will be notified.`, 'success');
+    addAuditLog(`Student reserved book "${book.title}" (ISBN: ${book.isbn})`, 'info', user?.name || user?.email || 'Student');
   };
 
 
@@ -117,14 +124,14 @@ export default function StudentDashboard({ user, onNotify }) {
       <aside className="w-full md:w-64 shrink-0 relative z-20">
         <div className="p-5 sticky top-24 border border-white/5 bg-slate-950/40 backdrop-blur-2xl shadow-2xl rounded-3xl overflow-hidden card-glass">
           {/* Subtle glowing orb in the corner */}
-          <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
-          <div className="absolute top-10 -left-10 w-40 h-40 bg-purple-500/20 blur-[60px] pointer-events-none" />
+          <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          <div className="absolute top-10 -left-10 w-40 h-40 bg-slate-800/10 blur-[60px] pointer-events-none" />
 
           <div className="mb-8 px-2 pt-3 relative z-10">
              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 tracking-tight">Student Portal</h2>
              <div className="flex items-center gap-2 mt-1">
-               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />
-               <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Library Access</p>
+               <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Library Access</p>
              </div>
           </div>
           
@@ -218,13 +225,13 @@ export default function StudentDashboard({ user, onNotify }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {MOCK_CATALOG.map(book => (
-                <div key={book.id} className="card-glass p-5 flex flex-col md:flex-row gap-4 hover:border-indigo-500/30 transition-all group">
-                  <div className="w-16 h-24 shrink-0 bg-indigo-500/10 rounded border border-indigo-500/20 flex items-center justify-center">
-                    <BookOpen className="w-6 h-6 text-indigo-400 opacity-50" />
+                <div key={book.id} className="card-glass p-5 flex flex-col md:flex-row gap-4 hover:border-white/10 transition-all group">
+                  <div className="w-16 h-24 shrink-0 bg-white/5 rounded border border-white/10 flex items-center justify-center">
+                    <BookOpen className="w-6 h-6 text-slate-400 opacity-50" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2 mb-1">
-                      <h3 className="font-bold text-white truncate text-base group-hover:text-indigo-300 transition-colors">{book.title}</h3>
+                      <h3 className="font-bold text-white truncate text-base group-hover:text-slate-300 transition-colors">{book.title}</h3>
                       <StatusBadge status={book.status} />
                     </div>
                     <p className="text-sm text-slate-400 mb-4 truncate">by {book.author}</p>

@@ -10,43 +10,43 @@ const features = [
     icon: Search,
     title: 'Smart Catalog Search',
     desc: 'Discover books by title, author, ISBN, or category instantly with intelligent full-text search.',
-    color: 'text-indigo-400',
-    bg: 'bg-indigo-500/10',
+    color: 'text-white',
+    bg: 'bg-white/5',
   },
   {
     icon: BookMarked,
     title: 'Issue & Return',
     desc: 'Streamlined circulation with real-time validation, quotas, and automatic fine calculation.',
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10',
+    color: 'text-slate-300',
+    bg: 'bg-white/5',
   },
   {
     icon: Users,
     title: 'Member Management',
     desc: 'Full membership lifecycle — onboarding, renewal reminders, and digital membership cards.',
-    color: 'text-pink-400',
-    bg: 'bg-pink-500/10',
+    color: 'text-white',
+    bg: 'bg-white/5',
   },
   {
     icon: BarChart3,
     title: 'Advanced Analytics',
     desc: 'Real-time dashboards with circulation analytics, overdue alerts, and procurement insights.',
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10',
+    color: 'text-slate-300',
+    bg: 'bg-white/5',
   },
   {
     icon: Shield,
     title: 'Role-Based Access',
     desc: 'Secure JWT authentication with granular RBAC for Admin, Librarian, and Member roles.',
-    color: 'text-green-400',
-    bg: 'bg-green-500/10',
+    color: 'text-white',
+    bg: 'bg-white/5',
   },
   {
     icon: Zap,
     title: 'Automated Fine Engine',
     desc: 'Linear overdue fine calculation (Total = Days × Rate) with manual waiver capabilities.',
-    color: 'text-cyan-400',
-    bg: 'bg-cyan-500/10',
+    color: 'text-slate-300',
+    bg: 'bg-white/5',
   },
 ];
 
@@ -70,13 +70,13 @@ export default function Home({ user }) {
       {/* Hero */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-24 px-6">
         {/* Background orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px] orb pointer-events-none" />
-        <div className="absolute bottom-10 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full blur-[100px] orb orb-delay pointer-events-none" />
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-slate-500/10 rounded-full blur-[120px] orb pointer-events-none" />
+        <div className="absolute bottom-10 right-1/4 w-80 h-80 bg-white/5 rounded-full blur-[100px] orb orb-delay pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-4 py-1.5 text-indigo-400 text-sm font-medium mb-8">
-            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-slate-300 text-sm font-medium mb-8">
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
             Modern Library Management System
           </div>
 
@@ -160,11 +160,11 @@ export default function Home({ user }) {
       {/* CTA Banner */}
       <section className="py-16 px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 to-purple-700 p-12 text-center">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 border border-white/5 p-12 text-center">
             <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
             <div className="relative z-10">
               <h2 className="text-3xl font-bold text-white mb-3">Ready to Modernize Your Library?</h2>
-              <p className="text-indigo-200 mb-8">Join thousands of institutions that trust LibraryOS for their daily operations.</p>
+              <p className="text-slate-300 mb-8">Join thousands of institutions that trust LibraryOS for their daily operations.</p>
               <div className="flex gap-4 justify-center">
                 {isLoggedIn ? (
                   <Link to="/dashboard" className="bg-white text-indigo-700 hover:bg-indigo-50 font-bold px-8 py-3 rounded-xl transition-all flex items-center gap-2">
