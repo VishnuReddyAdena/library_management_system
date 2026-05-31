@@ -190,7 +190,7 @@ router.post('/login', async (req, res) => {
   res.cookie('refresh', refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     path: '/api/auth/refresh/'
   });
 
@@ -205,7 +205,7 @@ router.post('/logout', (req, res) => {
   res.clearCookie('refresh', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     path: '/api/auth/refresh/'
   });
   return res.status(200).json({ success: true, message: "Successfully logged out." });
