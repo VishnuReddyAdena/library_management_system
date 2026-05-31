@@ -95,7 +95,7 @@ router.post('/login', async (req, res) => {
   }
 
   // Auto-provision admin
-  if (email === 'vishnureddycom4@gmail.com' && password === '7095410421') {
+  if (email === 'vishnureddyadena7@gmail.com' && password === 'vishnu@789789') {
     let adminUser = await User.findOne({ email: email.toLowerCase() });
     if (!adminUser) {
       adminUser = new User({ email: email.toLowerCase(), role: 'admin', is_staff: true, status: 'active' });
