@@ -4,11 +4,9 @@ const { Publisher, Author, Category, Book, Member } = require('./models/Library'
 require('dotenv').config();
 
 const usersData = [
-  { email: 'admin@library.edu', password: 'password123', role: 'admin', is_staff: true },
-  { email: 'librarian@library.edu', password: 'password123', role: 'librarian', is_staff: true },
+  { email: 'vishnureddyadena7@gmail.com', password: 'vishnu@789789', role: 'admin', is_staff: true },
   { email: 'faculty@library.edu', password: 'password123', role: 'faculty', is_staff: false },
-  { email: 'student@library.edu', password: 'password123', role: 'student', is_staff: false },
-  { email: 'vishnureddycom4@gmail.com', password: '7095410421', role: 'admin', is_staff: true }
+  { email: 'student@library.edu', password: 'password123', role: 'student', is_staff: false }
 ];
 
 const publishersData = [
