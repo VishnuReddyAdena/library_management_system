@@ -9,12 +9,18 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 // Configure CORS to support requests with credentials (cookies)
+const allowedOrigins = ['http://localhost:3005', 'http://127.0.0.1:3005', 'http://localhost:3000'];
+if (process.env.FRONTEND_URL) {
+  process.env.FRONTEND_URL.split(',').forEach(url => allowedOrigins.push(url.trim()));
+}
+
 app.use(cors({
-  origin: ['http://localhost:3005', 'http://127.0.0.1:3005', 'http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 app.use(express.json());
 app.use(cookieParser());
