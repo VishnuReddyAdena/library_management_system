@@ -51,7 +51,7 @@ const UserSchema = new mongoose.Schema({
 
 // Methods to set and verify password
 UserSchema.methods.setPassword = async function(password) {
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(4); // Speed up hashing on CPU-constrained servers
   this.passwordHash = await bcrypt.hash(password, salt);
 };
 
