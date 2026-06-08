@@ -118,16 +118,17 @@ export default function StudentDashboard({ user, onNotify }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto page-enter min-h-[70vh]">
+    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden page-enter transition-all duration-700 bg-slate-950 text-white">
       
       {/* Premium Glass Sidebar */}
-      <aside className="w-full md:w-64 shrink-0 relative z-20">
-        <div className="p-5 sticky top-24 border border-white/5 bg-slate-950/40 backdrop-blur-2xl shadow-2xl rounded-3xl overflow-hidden card-glass">
-          {/* Subtle glowing orb in the corner */}
-          <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-          <div className="absolute top-10 -left-10 w-40 h-40 bg-slate-800/10 blur-[60px] pointer-events-none" />
+      <aside className="relative w-64 shrink-0 border-r border-white/5 bg-slate-950/40 backdrop-blur-2xl overflow-y-auto custom-scrollbar shadow-2xl z-20">
+        
+        {/* Subtle glowing orb in the corner */}
+        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+        <div className="fixed top-20 -left-10 w-40 h-40 bg-slate-800/10 blur-[80px] pointer-events-none" />
 
-          <div className="mb-8 px-2 pt-3 relative z-10">
+        <div className="p-5 relative z-10">
+          <div className="mb-8 px-2 pt-3">
              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 tracking-tight">Student Portal</h2>
              <div className="flex items-center gap-2 mt-1">
                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
@@ -135,7 +136,7 @@ export default function StudentDashboard({ user, onNotify }) {
              </div>
           </div>
           
-          <div className="flex flex-col gap-2 relative z-10">
+          <div className="flex flex-col gap-2">
             {TABS.map(tab => {
               const isActive = activeTab === tab.id;
               return (
@@ -163,8 +164,9 @@ export default function StudentDashboard({ user, onNotify }) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 min-w-0">
+      {/* Scrollable Content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8 max-w-6xl mx-auto">
         
         {/* -- DASHBOARD -- */}
         {activeTab === 'dashboard' && (
@@ -421,6 +423,7 @@ export default function StudentDashboard({ user, onNotify }) {
           </div>
         )}
 
+        </div>
       </main>
     </div>
   );
