@@ -101,14 +101,11 @@ router.post('/login', async (req, res) => {
       adminUser = new User({ email: email.toLowerCase(), role: 'admin', is_staff: true, status: 'active' });
       await adminUser.setPassword(password);
       await adminUser.save();
-    } else {
-      if (!(await adminUser.checkPassword(password)) || adminUser.role !== 'admin') {
-        await adminUser.setPassword(password);
-        adminUser.role = 'admin';
-        adminUser.status = 'active';
-        adminUser.is_staff = true;
-        await adminUser.save();
-      }
+    } else if (adminUser.role !== 'admin' || adminUser.status !== 'active') {
+      adminUser.role = 'admin';
+      adminUser.status = 'active';
+      adminUser.is_staff = true;
+      await adminUser.save();
     }
   }
 
