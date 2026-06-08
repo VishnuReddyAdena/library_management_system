@@ -28,8 +28,10 @@ app.use(cookieParser());
 // Register API Routes
 const authRouter = require('./routes/auth');
 const libraryRouter = require('./routes/library');
+const otpRouter = require('./routes/otp');
 
 app.use('/api/auth', authRouter);
+app.use('/api/otp', otpRouter);
 app.use('/api', libraryRouter);
 
 // API root health check
