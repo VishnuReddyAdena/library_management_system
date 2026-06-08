@@ -274,8 +274,10 @@ router.post('/send-otp/', authMiddleware, async (req, res) => {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
-  if (!user || !pass) {
-    console.warn('SMTP credentials not configured. OTP email simulated. Code:', otp);
+  const isMockSmtp = !user || !pass || pass.includes('YOUR_GMAIL_APP_PASSWORD') || pass.trim() === '';
+
+  if (isMockSmtp) {
+    console.warn('SMTP credentials not configured or placeholder detected. OTP email simulated. Code:', otp);
     return res.status(200).json({
       success: true,
       message: 'OTP generated and simulated (SMTP not configured)',
@@ -293,7 +295,9 @@ router.post('/send-otp/', authMiddleware, async (req, res) => {
       auth: {
         user,
         pass
-      }
+      },
+      connectionTimeout: 8000, // 8 seconds timeout
+      socketTimeout: 8000      // 8 seconds socket timeout
     });
 
     const mailOptions = {
