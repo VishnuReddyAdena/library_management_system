@@ -85,6 +85,18 @@ const AuditLogSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  action: {
+    type: String,
+    default: null,
+  },
+  level: {
+    type: String,
+    default: 'info',
+  },
+  username: {
+    type: String,
+    default: 'System',
+  },
   timestamp: {
     type: Date,
     default: Date.now,

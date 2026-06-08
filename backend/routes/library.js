@@ -10,7 +10,7 @@ const {
   Transaction,
   PurchaseOrder
 } = require('../models/Library');
-const { User } = require('../models/User');
+const { User, AuditLog } = require('../models/User');
 
 const formatDate = (date) => {
   if (!date) return null;
@@ -323,6 +323,56 @@ router.post('/send-otp/', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error sending email via nodemailer:', err);
     return res.status(500).json({ error: 'Failed to send email: ' + err.message });
+  }
+});
+
+// GET all audit logs
+router.get('/audit-logs/', authMiddleware, async (req, res) => {
+  try {
+    const logs = await AuditLog.find()
+      .sort({ timestamp: -1 })
+      .populate('user_id', 'email role');
+    
+    // Map to a format matches the frontend expectations
+    const formattedLogs = logs.map(log => ({
+      id: log._id.toString(),
+      user: log.username || (log.user_id && log.user_id.email) || log.email_attempted || 'System',
+      action: log.action || log.event_type || 'Unknown activity',
+      time: log.timestamp.toISOString(),
+      level: log.level || 'info',
+      timestamp: log.timestamp.getTime()
+    }));
+    return res.status(200).json(formattedLogs);
+  } catch (err) {
+    console.error('Error getting audit logs:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST a new audit log
+router.post('/audit-logs/', authMiddleware, async (req, res) => {
+  const { action, level, user } = req.body;
+  if (!action) {
+    return res.status(400).json({ error: 'Action is required' });
+  }
+
+  try {
+    const log = new AuditLog({
+      user_id: req.user.id || req.user.sub || null,
+      email_attempted: req.user.email || null,
+      role_attempted: req.user.role || null,
+      ip_address: req.ip || req.connection.remoteAddress || null,
+      user_agent: req.headers['user-agent'] || 'Unknown',
+      event_type: 'frontend_activity',
+      action: action,
+      level: level || 'info',
+      username: user || req.user.email || 'System'
+    });
+    await log.save();
+    return res.status(201).json({ success: true, log });
+  } catch (err) {
+    console.error('Error saving audit log:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
