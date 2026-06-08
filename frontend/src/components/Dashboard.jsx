@@ -422,30 +422,22 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
     setOtpError('');
     const destination = returnMethod === 'email' ? returnEmail : returnPhone;
 
-    if (returnMethod === 'email') {
-      authService.post('/api/otp/send', { email: destination })
-        .then(response => {
-          setOtpSent(true);
-          if (response.data.simulated) {
-            setActualOtp(response.data.otp); // fallback local storage for mock verification
-            alert(`[OTP SIMULATION]\nSMTP settings are not configured in backend/.env.\n\nSimulated OTP code has been logged to the console.\n\nTo: ${destination}\nVerification Code: ${response.data.otp}`);
-          } else {
-            setActualOtp(null); // code is verified in the backend
-            alert(`A 6-digit verification code has been sent to: ${destination}`);
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          const errorMsg = err.response?.data?.error || err.message || 'Failed to connect to authentication server.';
-          setOtpError(`Failed to send code: ${errorMsg}`);
-        });
-    } else {
-      // Simulate sending SMS
-      const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-      setActualOtp(generatedCode);
-      setOtpSent(true);
-      alert(`[SMS SIMULATION]\nA code has been sent to: ${destination}\n\nSubject: LibraryOS Verification\nBody: Your book return verification code is ${generatedCode}.`);
-    }
+    authService.post('/api/otp/send', { type: returnMethod, destination: destination })
+      .then(response => {
+        setOtpSent(true);
+        if (response.data.simulated) {
+          setActualOtp(response.data.otp); // fallback local storage for mock verification
+          alert(`[OTP SIMULATION]\n${response.data.message}\n\nTo: ${destination}\nVerification Code: ${response.data.otp}`);
+        } else {
+          setActualOtp(null); // code is verified in the backend
+          alert(`A 6-digit verification code has been sent to: ${destination}`);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        const errorMsg = err.response?.data?.error || err.message || 'Failed to connect to authentication server.';
+        setOtpError(`Failed to send code: ${errorMsg}`);
+      });
 
     setTimeout(() => {
       setOtpSent(false); // allow requesting again after 15 seconds
@@ -483,9 +475,9 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
       setReturnModalBook(null);
     };
 
-    if (returnMethod === 'email' && !actualOtp) {
+    if (!actualOtp) {
       // Real backend verification
-      authService.post('/api/otp/verify', { email: destination, otp: returnCode })
+      authService.post('/api/otp/verify', { destination: destination, otp: returnCode })
         .then(response => {
           if (response.data.success) {
             completeReturn();
@@ -499,7 +491,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
           setOtpError(errorMsg);
         });
     } else {
-      // Local/SMS simulation fallback verification
+      // Local simulation fallback verification
       if (returnCode.trim() !== actualOtp) {
         setOtpError('Invalid code!');
         return;
