@@ -419,31 +419,32 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
     if (returnMethod === 'email' && !returnEmail) return;
     if (returnMethod === 'phone' && !returnPhone) return;
 
-    // Generate a secure 6-digit random code
-    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setActualOtp(generatedCode);
-    setOtpSent(true);
     setOtpError('');
-
     const destination = returnMethod === 'email' ? returnEmail : returnPhone;
 
     if (returnMethod === 'email') {
-      authService.post('/api/send-otp/', { email: destination, otp: generatedCode })
+      authService.post('/api/otp/send', { email: destination })
         .then(response => {
+          setOtpSent(true);
           if (response.data.simulated) {
-            alert(`[SYSTEM ALERT - OTP SIMULATION]\n\nSMTP settings are not configured in backend/.env.\n\nA simulated code has been logged to the backend console.\n\nTo: ${destination}\nVerification Code: ${generatedCode}`);
+            setActualOtp(response.data.otp); // fallback local storage for mock verification
+            alert(`[OTP SIMULATION]\nSMTP settings are not configured in backend/.env.\n\nSimulated OTP code has been logged to the console.\n\nTo: ${destination}\nVerification Code: ${response.data.otp}`);
           } else {
+            setActualOtp(null); // code is verified in the backend
             alert(`A 6-digit verification code has been sent to: ${destination}`);
           }
         })
         .catch(err => {
           console.error(err);
-          const errorMsg = err.response?.data?.error || err.message;
-          alert(`Failed to send email: ${errorMsg}\n\n[Fallback Code]: ${generatedCode}`);
+          const errorMsg = err.response?.data?.error || err.message || 'Failed to connect to authentication server.';
+          setOtpError(`Failed to send code: ${errorMsg}`);
         });
     } else {
       // Simulate sending SMS
-      alert(`[SYSTEM ALERT - OTP SIMULATION]\n\nA code has been sent to: ${destination}\n\nSubject: LibraryOS Verification\nBody: Your book return verification code is ${generatedCode}.`);
+      const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+      setActualOtp(generatedCode);
+      setOtpSent(true);
+      alert(`[SMS SIMULATION]\nA code has been sent to: ${destination}\n\nSubject: LibraryOS Verification\nBody: Your book return verification code is ${generatedCode}.`);
     }
 
     setTimeout(() => {
@@ -454,34 +455,57 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
   const confirmReturn = (e) => {
     e.preventDefault();
     if (!returnCode) return;
-
-    if (returnCode.trim() !== actualOtp) {
-      setOtpError('Invalid code!');
-      return;
-    }
-
     setOtpError('');
-    let calculatedFine = 0;
-    setIssuedBooks(issuedBooks.map(b => {
-      if (b.id === returnModalBook.id) {
-        calculatedFine = b.fine || 0;
-        const due = new Date(b.dueDate);
-        const now = new Date();
-        if (due < now) {
-          const daysLeft = (due - now) / 86400000;
-          calculatedFine += Math.floor(Math.max(daysLeft * -1, 1)) * 10;
+
+    const destination = returnMethod === 'email' ? returnEmail : returnPhone;
+
+    const completeReturn = () => {
+      let calculatedFine = 0;
+      setIssuedBooks(issuedBooks.map(b => {
+        if (b.id === returnModalBook.id) {
+          calculatedFine = b.fine || 0;
+          const due = new Date(b.dueDate);
+          const now = new Date();
+          if (due < now) {
+            const daysLeft = (due - now) / 86400000;
+            calculatedFine += Math.floor(Math.max(daysLeft * -1, 1)) * 10;
+          }
+          return { ...b, status: 'returned', fine: calculatedFine, returnedOn: now.toISOString() };
         }
-        return { ...b, status: 'returned', fine: calculatedFine, returnedOn: now.toISOString() };
+        return b;
+      }));
+      addActivity(`"${returnModalBook.book}" formally returned by ${returnModalBook.member}`, 'return');
+      addAuditLog(`Returned book "${returnModalBook.book}" (ISBN: ${returnModalBook.isbn}) from ${returnModalBook.member}`, 'success', user?.name || 'Librarian');
+      if (calculatedFine > (returnModalBook.fine || 0)) {
+        addActivity(`System mapped fine of ₹${calculatedFine} for ${returnModalBook.member}`, 'fine');
+        addAuditLog(`Late fine of ₹${calculatedFine} registered for ${returnModalBook.member}`, 'warning', user?.name || 'Librarian');
       }
-      return b;
-    }));
-    addActivity(`"${returnModalBook.book}" formally returned by ${returnModalBook.member}`, 'return');
-    addAuditLog(`Returned book "${returnModalBook.book}" (ISBN: ${returnModalBook.isbn}) from ${returnModalBook.member}`, 'success', user?.name || 'Librarian');
-    if (calculatedFine > (returnModalBook.fine || 0)) {
-      addActivity(`System mapped fine of ₹${calculatedFine} for ${returnModalBook.member}`, 'fine');
-      addAuditLog(`Late fine of ₹${calculatedFine} registered for ${returnModalBook.member}`, 'warning', user?.name || 'Librarian');
+      setReturnModalBook(null);
+    };
+
+    if (returnMethod === 'email' && !actualOtp) {
+      // Real backend verification
+      authService.post('/api/otp/verify', { email: destination, otp: returnCode })
+        .then(response => {
+          if (response.data.success) {
+            completeReturn();
+          } else {
+            setOtpError(response.data.error || 'Invalid code!');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          const errorMsg = err.response?.data?.error || err.message || 'Failed to verify code with server.';
+          setOtpError(errorMsg);
+        });
+    } else {
+      // Local/SMS simulation fallback verification
+      if (returnCode.trim() !== actualOtp) {
+        setOtpError('Invalid code!');
+        return;
+      }
+      completeReturn();
     }
-    setReturnModalBook(null);
   };
 
   const handleUndoReturn = (id) => {
