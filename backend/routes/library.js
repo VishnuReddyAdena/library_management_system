@@ -263,4 +263,64 @@ router.post('/transactions/:id/return_book/', authMiddleware, async (req, res) =
   }
 });
 
+router.post('/send-otp/', authMiddleware, async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: 'email and otp are required' });
+  }
+
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!user || !pass) {
+    console.warn('SMTP credentials not configured. OTP email simulated. Code:', otp);
+    return res.status(200).json({
+      success: true,
+      message: 'OTP generated and simulated (SMTP not configured)',
+      simulated: true,
+      otp
+    });
+  }
+
+  try {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: {
+        user,
+        pass
+      }
+    });
+
+    const mailOptions = {
+      from: `"LibraryOS System" <${user}>`,
+      to: email,
+      subject: 'LibraryOS Verification Code',
+      text: `Your book return verification code is ${otp}.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; background-color: #f8fafc;">
+          <h2 style="color: #4f46e5; margin-bottom: 16px;">LibraryOS Return Verification</h2>
+          <p style="font-size: 16px; color: #334155; line-height: 1.5;">You requested a verification code to return your library book. Please use the following 6-digit code to complete the process:</p>
+          <div style="display: block; width: fit-content; margin: 24px 0; padding: 12px 24px; background-color: #e0e7ff; border: 1px solid #c7d2fe; border-radius: 6px; font-size: 24px; font-weight: bold; color: #3730a3; letter-spacing: 2px;">
+            ${otp}
+          </div>
+          <p style="font-size: 14px; color: #64748b; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">If you did not request this code, please ignore this email or contact your librarian.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Verification code ${otp} sent to ${email}`);
+    return res.status(200).json({ success: true, message: 'OTP sent successfully' });
+  } catch (err) {
+    console.error('Error sending email via nodemailer:', err);
+    return res.status(500).json({ error: 'Failed to send email: ' + err.message });
+  }
+});
+
 module.exports = router;
+

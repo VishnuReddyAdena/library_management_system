@@ -6,6 +6,7 @@ import {
   CreditCard, FileText, Calendar, Download, BarChart2, Shield, Upload
 } from 'lucide-react';
 import { addAuditLog } from '../utils/auditLogger';
+import authService from '../services/authService';
 
 // ─── Custom Hooks ───────────────────────────────────────────────────────────────
 function useLocalStorage(key, initialValue) {
@@ -426,8 +427,24 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
 
     const destination = returnMethod === 'email' ? returnEmail : returnPhone;
 
-    // Simulate sending email/sms (in a real app, this calls an API to send SMTP email or Twilio SMS)
-    alert(`[SYSTEM ALERT - OTP SIMULATION]\n\nA code has been sent to: ${destination}\n\nSubject: LibraryOS Verification\nBody: Your book return verification code is ${generatedCode}.`);
+    if (returnMethod === 'email') {
+      authService.post('/api/send-otp/', { email: destination, otp: generatedCode })
+        .then(response => {
+          if (response.data.simulated) {
+            alert(`[SYSTEM ALERT - OTP SIMULATION]\n\nSMTP settings are not configured in backend/.env.\n\nA simulated code has been logged to the backend console.\n\nTo: ${destination}\nVerification Code: ${generatedCode}`);
+          } else {
+            alert(`A 6-digit verification code has been sent to: ${destination}`);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          const errorMsg = err.response?.data?.error || err.message;
+          alert(`Failed to send email: ${errorMsg}\n\n[Fallback Code]: ${generatedCode}`);
+        });
+    } else {
+      // Simulate sending SMS
+      alert(`[SYSTEM ALERT - OTP SIMULATION]\n\nA code has been sent to: ${destination}\n\nSubject: LibraryOS Verification\nBody: Your book return verification code is ${generatedCode}.`);
+    }
 
     setTimeout(() => {
       setOtpSent(false); // allow requesting again after 15 seconds
