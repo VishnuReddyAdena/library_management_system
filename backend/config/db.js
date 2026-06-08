@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let mongoServer;
+let isInMemory = false;
 
 const connectDB = async () => {
   try {
@@ -9,9 +10,12 @@ const connectDB = async () => {
 
     if (!mongoUri) {
       console.log('No MONGODB_URI found. Starting MongoMemoryServer (In-Memory MongoDB)...');
+      isInMemory = true;
       mongoServer = await MongoMemoryServer.create();
       mongoUri = mongoServer.getUri();
       console.log(`MongoMemoryServer started at: ${mongoUri}`);
+    } else {
+      isInMemory = false;
     }
 
     const conn = await mongoose.connect(mongoUri);
@@ -35,4 +39,8 @@ const disconnectDB = async () => {
   }
 };
 
-module.exports = { connectDB, disconnectDB };
+const getDbStatus = () => {
+  return isInMemory ? 'Ephemeral In-Memory' : 'Persistent MongoDB Atlas/URI';
+};
+
+module.exports = { connectDB, disconnectDB, getDbStatus };

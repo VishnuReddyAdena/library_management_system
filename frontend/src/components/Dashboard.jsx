@@ -1957,9 +1957,9 @@ export default function Dashboard({ user, onNotify }) {
   const [logs, setLogs] = useState(() => {
     try {
       const stored = localStorage.getItem('admin_audit_logs');
-      return stored ? JSON.parse(stored) : MOCK_LOGS.map((l, i) => ({ ...l, timestamp: Date.now() - (i * 3600 * 1000) }));
+      return stored ? JSON.parse(stored) : [];
     } catch {
-      return MOCK_LOGS.map((l, i) => ({ ...l, timestamp: Date.now() - (i * 3600 * 1000) }));
+      return [];
     }
   });
 
@@ -1974,12 +1974,27 @@ export default function Dashboard({ user, onNotify }) {
     }
   };
 
+  const fetchDbLogs = () => {
+    authService.get('/api/audit-logs/')
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setLogs(res.data);
+          localStorage.setItem('admin_audit_logs', JSON.stringify(res.data));
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch logs from database:", err);
+        syncLogs();
+      });
+  };
+
   useEffect(() => {
+    fetchDbLogs();
     window.addEventListener('storage', syncLogs);
-    window.addEventListener('storage_updated', syncLogs);
+    window.addEventListener('storage_updated', fetchDbLogs);
     return () => {
       window.removeEventListener('storage', syncLogs);
-      window.removeEventListener('storage_updated', syncLogs);
+      window.removeEventListener('storage_updated', fetchDbLogs);
     };
   }, []);
 

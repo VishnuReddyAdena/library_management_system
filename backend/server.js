@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
-const { connectDB } = require('./config/db');
+const { connectDB, getDbStatus } = require('./config/db');
 const seed = require('./seed');
 
 const app = express();
@@ -34,8 +34,13 @@ app.use('/api', libraryRouter);
 
 // API root health check
 app.get('/', (req, res) => {
+  const status = getDbStatus();
   return res.json({
     message: 'LibraryOS Backend API is running ✅ (Node.js/Express MERN Version)',
+    database: status,
+    warning: status.includes('Ephemeral') 
+      ? 'WARNING: Using an in-memory database. All registered users, activity logs, and library data will be permanently deleted when the server sleeps or restarts on Render. Please configure MONGODB_URI or MONGO_URI in your Render environment settings.' 
+      : undefined,
     frontend: 'http://localhost:3005',
     api: '/api/',
   });
