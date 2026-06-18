@@ -542,3 +542,24 @@ select.input-field {
   background: rgba(99, 102, 241, 0.4);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN DARK MODE SIDEBAR FIX — increase text contrast
+   ═══════════════════════════════════════════════════════════════ */
+/* Make sidebar nav text clearly readable in dark mode */
+aside button.text-slate-400 {
+  color: #94a3b8 !important; /* was too dark, now slate-400 */
+}
+aside button.text-slate-400:hover {
+  color: #e2e8f0 !important;
+}
+aside .text-slate-500 {
+  color: #94a3b8 !important;
+}
+aside h2 {
+  color: #f1f5f9 !important;
+}
+aside p.text-slate-400, aside span.text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+

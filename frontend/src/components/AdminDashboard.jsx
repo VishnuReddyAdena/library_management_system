@@ -2594,6 +2594,7 @@ function PaymentsTab({ payments, setPayments, issuedBooks, setIssuedBooks, addLo
 
 // ─── Main Admin Dashboard ─────────────────────────────────────────────────────
 export default function AdminDashboard({ user, onNotify }) {
+  const darkMode = true; // always dark
   const [activeTab, setActiveTab]   = useState('dashboard');
   const [librarians, setLibrarians] = useState(MOCK_LIBRARIANS);
   const [students, setStudents]     = useState(MOCK_STUDENTS);
@@ -2605,9 +2606,6 @@ export default function AdminDashboard({ user, onNotify }) {
 
   const pendingReservationsCount = reservations.filter(r => r.status === 'Pending').length;
   const pendingPaymentsCount = payments.filter(p => p.status === 'Pending' || p.status === 'Pending Verification').length;
-  const [darkMode, setDarkMode]     = useState(() => {
-    try { return localStorage.getItem('admin_dark_mode') !== 'false'; } catch { return true; }
-  });
   const [settings, setSettings] = useState({
     fineRate: 10, maxBooksStudent: 5, maxBooksFaculty: 15,
     borrowDurationStudent: 14, borrowDurationFaculty: 30,
@@ -2619,18 +2617,7 @@ export default function AdminDashboard({ user, onNotify }) {
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // Persist dark mode & handle document body class for light mode overrides
-  useEffect(() => {
-    try { localStorage.setItem('admin_dark_mode', String(darkMode)); } catch {}
-    if (darkMode) {
-      document.body.classList.remove('admin-light-mode');
-    } else {
-      document.body.classList.add('admin-light-mode');
-    }
-    return () => {
-      document.body.classList.remove('admin-light-mode');
-    };
-  }, [darkMode]);
+  // Sync with global theme — admin-light-mode on body is now handled by ThemeContext
 
   // Global keyboard shortcut for palette
   useEffect(() => {
@@ -2733,17 +2720,6 @@ export default function AdminDashboard({ user, onNotify }) {
           </div>
         </div>
 
-        {/* Sidebar Bottom: Dark Mode Toggle */}
-        <div className="p-5 border-t border-white/5">
-          <button onClick={() => setDarkMode(d => !d)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/5 text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-semibold">
-            {darkMode ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
-            {darkMode ? 'Dark Mode' : 'Light Mode'}
-            <div className="ml-auto w-8 h-4 rounded-full border border-white/10 bg-slate-800 relative">
-              <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-300 ${darkMode ? 'left-4 bg-indigo-400' : 'left-0.5 bg-slate-400'}`} />
-            </div>
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}
