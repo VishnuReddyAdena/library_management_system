@@ -29,13 +29,15 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const [existing, existingName] = await Promise.all([
+      User.findOne({ email: email.toLowerCase() }),
+      User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } })
+    ]);
+
     if (existing) {
       return res.status(400).json({ success: false, message: "An account with this email already exists." });
     }
 
-    // Check name uniqueness (case-insensitive)
-    const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
     if (existingName) {
       return res.status(400).json({ success: false, message: "use another name .not available!" });
     }
@@ -48,7 +50,8 @@ router.post('/register', async (req, res) => {
       is_staff: role === 'admin' || role === 'librarian',
     });
     await user.setPassword(password);
-    await user.save();
+
+    const savePromises = [user.save()];
 
     // Auto create member profile
     if (user.role === 'student' || user.role === 'faculty') {
@@ -57,8 +60,10 @@ router.post('/register', async (req, res) => {
         membership_type: user.role === 'student' ? 'Student' : 'Faculty',
         expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
       });
-      await member.save();
+      savePromises.push(member.save());
     }
+
+    await Promise.all(savePromises);
 
     return res.status(201).json({ success: true, message: "Account created successfully." });
   } catch (err) {
@@ -166,11 +171,11 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ success: false, message: "Invalid credentials.", code: "INVALID_CREDENTIALS" });
   }
 
-  // If password was correct, and it is a legacy 10-rounds hash, upgrade it to 4 rounds in the background
-  if (!isAdminPrechecked && user.passwordHash && (user.passwordHash.startsWith('$2a$10$') || user.passwordHash.startsWith('$2b$10$'))) {
+  // If password was correct, and it is a legacy hash (e.g. bcrypt), upgrade it to pbkdf2 in the background
+  if (!isAdminPrechecked && user.passwordHash && !user.passwordHash.startsWith('pbkdf2$')) {
     user.setPassword(password)
       .then(() => user.save())
-      .then(() => console.log('Successfully upgraded user password hash to 4 rounds for faster logins'))
+      .then(() => console.log('Successfully upgraded user password hash to pbkdf2 for ultra fast logins'))
       .catch(err => console.error('Failed to upgrade user password hash:', err));
   }
 

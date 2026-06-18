@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const UserSchema = new mongoose.Schema({
   email: {
@@ -55,11 +56,20 @@ const UserSchema = new mongoose.Schema({
 
 // Methods to set and verify password
 UserSchema.methods.setPassword = async function(password) {
-  const salt = await bcrypt.genSalt(4); // Speed up hashing on CPU-constrained servers
-  this.passwordHash = await bcrypt.hash(password, salt);
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  this.passwordHash = `pbkdf2$10000$${salt}$${hash}`;
 };
 
 UserSchema.methods.checkPassword = async function(password) {
+  if (this.passwordHash && this.passwordHash.startsWith('pbkdf2$')) {
+    const parts = this.passwordHash.split('$');
+    const iterations = parseInt(parts[1], 10);
+    const salt = parts[2];
+    const hash = parts[3];
+    const verifyHash = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
+    return hash === verifyHash;
+  }
   return await bcrypt.compare(password, this.passwordHash);
 };
 
