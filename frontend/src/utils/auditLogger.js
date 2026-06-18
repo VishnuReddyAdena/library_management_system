@@ -23,7 +23,8 @@ export const addAuditLog = (action, level = 'info', user = 'System') => {
   }
 
   // Save to backend database if authenticated
-  const token = localStorage.getItem('access_token');
+  // sessionStorage is tab-scoped; fall back to localStorage for legacy compat
+  const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
   if (token) {
     authService.post('/api/audit-logs/', { action, level, user })
       .catch(err => {

@@ -84,6 +84,21 @@ const PurchaseOrderSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+// Settings Schema — singleton document (one row for the whole system)
+const SettingsSchema = new mongoose.Schema({
+  fineRate: { type: Number, default: 10 },
+  maxBooksStudent: { type: Number, default: 5 },
+  maxBooksFaculty: { type: Number, default: 15 },
+  borrowDurationStudent: { type: Number, default: 14 },
+  borrowDurationFaculty: { type: Number, default: 30 },
+  globalMaxBooks: { type: Number, default: 20 },
+  reservationExpiry: { type: Number, default: 7 },
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
 const Publisher = mongoose.model('Publisher', PublisherSchema);
 const Author = mongoose.model('Author', AuthorSchema);
 const Category = mongoose.model('Category', CategorySchema);
@@ -91,6 +106,7 @@ const Book = mongoose.model('Book', BookSchema);
 const Member = mongoose.model('Member', MemberSchema);
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 const PurchaseOrder = mongoose.model('PurchaseOrder', PurchaseOrderSchema);
+const Settings = mongoose.model('Settings', SettingsSchema);
 
 module.exports = {
   Publisher,
@@ -99,5 +115,6 @@ module.exports = {
   Book,
   Member,
   Transaction,
-  PurchaseOrder
+  PurchaseOrder,
+  Settings,
 };

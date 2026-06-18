@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const OTP = require('../models/OTP');
 const authMiddleware = require('../middleware/auth');
+const otpGenerator = require('otp-generator');
+const { sendEmail } = require('../utils/mailer');
 
 // POST /api/otp/send
 router.post('/send', authMiddleware, async (req, res) => {
@@ -10,8 +12,13 @@ router.post('/send', authMiddleware, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Type (email/phone) and Destination are required' });
   }
 
-  // Generate a secure 6-digit numeric OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate a secure 6-digit numeric OTP using otp-generator
+  const otp = otpGenerator.generate(6, {
+    digits: true,
+    upperCaseAlphabets: false,
+    specialChars: false,
+    lowerCaseAlphabets: false
+  });
 
   try {
     // Clean up any existing OTPs for this destination to prevent multiple valid OTPs
@@ -25,39 +32,7 @@ router.post('/send', authMiddleware, async (req, res) => {
     await otpRecord.save();
 
     if (type === 'email') {
-      // Mail configurations
-      const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const port = parseInt(process.env.SMTP_PORT || '587');
-      const user = process.env.SMTP_USER;
-      const pass = process.env.SMTP_PASS;
-
-      const isMockSmtp = !user || !pass || pass.includes('YOUR_GMAIL_APP_PASSWORD') || pass.trim() === '';
-
-      if (isMockSmtp) {
-        console.warn('SMTP credentials not configured. Simulated OTP for email:', destination, 'Code:', otp);
-        return res.status(200).json({
-          success: true,
-          message: 'OTP generated and simulated (SMTP not configured)',
-          simulated: true,
-          otp
-        });
-      }
-
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: {
-          user,
-          pass
-        },
-        connectionTimeout: 8000, // 8 seconds timeout
-        socketTimeout: 8000
-      });
-
       const mailOptions = {
-        from: `"LibraryOS Verification" <${user}>`,
         to: destination,
         subject: 'LibraryOS Return Verification Code',
         text: `Your book return verification code is ${otp}. It will expire in 5 minutes.`,
@@ -74,7 +49,18 @@ router.post('/send', authMiddleware, async (req, res) => {
         `
       };
 
-      await transporter.sendMail(mailOptions);
+      const result = await sendEmail(mailOptions);
+      
+      if (result.simulated) {
+        console.warn('SMTP credentials not configured. Simulated OTP for email:', destination, 'Code:', otp);
+        return res.status(200).json({
+          success: true,
+          message: 'OTP generated and simulated (SMTP not configured)',
+          simulated: true,
+          otp
+        });
+      }
+
       console.log(`Verification code ${otp} sent successfully to email ${destination}`);
       return res.status(200).json({ success: true, message: 'OTP sent successfully' });
 

@@ -4,6 +4,7 @@ import {
   BookOpen, Search, Users, BarChart3, ArrowRight,
   BookMarked, Shield, Clock, Zap, Star, LayoutDashboard
 } from 'lucide-react';
+import ThreeDBackground from './ThreeDBackground';
 
 const features = [
   {
@@ -66,28 +67,31 @@ const testimonials = [
 export default function Home({ user }) {
   const isLoggedIn = !!user;
   return (
-    <div className="page-enter">
+    <div className="page-enter relative min-h-screen">
+      {/* Premium Fixed 3D Background */}
+      <ThreeDBackground />
+
       {/* Hero */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-24 px-6">
-        {/* Background orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-slate-500/10 rounded-full blur-[120px] orb pointer-events-none" />
-        <div className="absolute bottom-10 right-1/4 w-80 h-80 bg-white/5 rounded-full blur-[100px] orb orb-delay pointer-events-none" />
+        {/* Ambient background orbs for added depth */}
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-slate-500/5 rounded-full blur-[120px] orb pointer-events-none" />
+        <div className="absolute bottom-10 right-1/4 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] orb orb-delay pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-slate-300 text-sm font-medium mb-8">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            Modern Library Management System
+          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/25 rounded-full px-4 py-1.5 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm">
+            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+            ✦ The Knowledge Engine for Modern Institutions
           </div>
 
-          <h1 className="text-6xl sm:text-7xl font-extrabold tracking-tight mb-6 leading-none text-white">
-            Your Library,{' '}
-            <span className="gradient-text">Reimagined</span>
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-8 leading-[1.15] text-white">
+            Everything Your Library Needs.<br className="hidden sm:inline" />
+            <span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent"> One Platform.</span>
           </h1>
 
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-12 leading-relaxed">
-            A next-generation platform for cataloging, circulation, and member management.
-            Built for modern institutions that demand speed, security, and simplicity.
+          <p className="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed font-light font-sans">
+            Manage books, members, circulation, and institutional records through a<br className="hidden md:inline" />
+            secure and scalable platform built for modern educational institutions.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -122,8 +126,9 @@ export default function Home({ user }) {
             )}
           </div>
 
+
           {/* Stats row */}
-          <div className="mt-20 grid grid-cols-2 sm:grid-cols-4 gap-6">
+          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6">
             {stats.map((s, i) => (
               <div key={i} className="card-glass p-5 text-center">
                 <p className="text-3xl font-extrabold gradient-text">{s.value}</p>
@@ -131,6 +136,7 @@ export default function Home({ user }) {
               </div>
             ))}
           </div>
+
         </div>
       </section>
 

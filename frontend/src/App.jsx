@@ -1,27 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
-import Home      from './components/Home';
-import Catalogs  from './components/Catalogs';
-import Profile   from './components/Profile';
-import Pricing   from './components/Pricing';
-import Auth      from './components/Auth';
+import Home from './components/Home';
+import Catalogs from './components/Catalogs';
+import Profile from './components/Profile';
+import Pricing from './components/Pricing';
+import Auth from './components/Auth';
 import StudentDashboard from './components/StudentDashboard';
-import AdminDashboard   from './components/AdminDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import LibrarianDashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import logoImg from './logo.png';
 
-import { BookOpen, UserCircle, LogOut, Menu, X, AlertCircle, ShieldAlert } from 'lucide-react';
+import { UserCircle, LogOut, Menu, X, AlertCircle, ShieldAlert } from 'lucide-react';
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
-  { to: '/',          label: 'Home'      },
-  { to: '/catalogs',  label: 'Catalogs'  },
-  { to: '/pricing',   label: 'Pricing'   },
+  { to: '/', label: 'Home' },
+  { to: '/catalogs', label: 'Catalogs' },
+  { to: '/pricing', label: 'Pricing' },
 ];
 
 function Navbar({ user, onLogout }) {
-  const location   = useLocation();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const isAuth = !!user;
 
@@ -33,11 +34,13 @@ function Navbar({ user, onLogout }) {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
 
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-white to-slate-300 rounded-lg flex items-center justify-center shadow-md">
-            <BookOpen className="w-4.5 h-4.5 text-slate-950 w-5 h-5" />
-          </div>
-          <span className="font-bold text-white text-lg tracking-tight">Library<span className="text-slate-300">OS</span></span>
+        <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
+          <img
+            src={logoImg}
+            alt="LibraryOS"
+            className="w-9 h-9 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.55)] group-hover:scale-110 group-hover:drop-shadow-[0_0_16px_rgba(99,102,241,0.8)] transition-all duration-300"
+          />
+          <span className="font-bold text-white text-lg tracking-tight">Library<span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">OS</span></span>
         </Link>
 
         {/* Desktop Nav */}
@@ -178,18 +181,18 @@ function Toast({ message, type = 'success', onHide }) {
 
   if (!message) return null;
 
-  const isError = type === 'error';
+  const typeStyles = {
+    success: { bg: 'bg-emerald-600/90 shadow-emerald-500/30 border-emerald-400/30', icon: <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg> },
+    error: { bg: 'bg-red-600/90 shadow-red-500/30 border-red-400/30', icon: <AlertCircle className="w-5 h-5 flex-shrink-0" /> },
+    warning: { bg: 'bg-amber-600/90 shadow-amber-500/30 border-amber-400/30', icon: <AlertCircle className="w-5 h-5 flex-shrink-0" /> },
+    info: { bg: 'bg-blue-600/90 shadow-blue-500/30 border-blue-400/30', icon: <ShieldAlert className="w-5 h-5 flex-shrink-0" /> },
+  };
+  const style = typeStyles[type] || typeStyles.success;
 
   return (
     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] pointer-events-none">
-      <div className={`${isError ? 'bg-red-600/90 shadow-red-500/30 border-red-400/30' : 'bg-emerald-600/90 shadow-emerald-500/30 border-emerald-400/30'} backdrop-blur-lg text-white px-6 py-3 rounded-full shadow-2xl font-medium text-sm flex items-center gap-2.5 animate-bounce-once border`}>
-        {isError ? (
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-        ) : (
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-          </svg>
-        )}
+      <div className={`${style.bg} backdrop-blur-lg text-white px-6 py-3 rounded-full shadow-2xl font-medium text-sm flex items-center gap-2.5 animate-bounce-once border`}>
+        {style.icon}
         {message}
       </div>
     </div>
@@ -204,11 +207,15 @@ function Footer({ user }) {
   return (
     <footer className="border-t border-white/10 bg-slate-950">
       <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-white" />
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <img
+            src={logoImg}
+            alt="LibraryOS"
+            className="w-7 h-7 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
+          />
           <span className="font-bold text-white text-base tracking-tight">LibraryOS</span>
         </Link>
-        
+
         <p className="text-sm text-slate-500">
           &copy; 2025 LibraryOS. All rights reserved.
         </p>
@@ -247,19 +254,14 @@ function UnauthorizedAccess({ portalName, onLogout }) {
 function AppContent() {
   const [user, setUser] = useState(() => {
     try {
-      // Primary source: user_data written by Auth.jsx after JWT login
-      const jwtData = localStorage.getItem('user_data');
+      // sessionStorage is tab-scoped — each tab reads its OWN session
+      const jwtData = sessionStorage.getItem('user_data');
       if (jwtData) {
         const u = JSON.parse(jwtData);
         const avatar = localStorage.getItem(u.email + '_lms_avatar');
         return avatar ? { ...u, avatar } : u;
       }
-      // Fallback: legacy lms_user key
-      const stored = localStorage.getItem('lms_user');
-      if (!stored) return null;
-      const u = JSON.parse(stored);
-      const avatar = localStorage.getItem(u.email + '_lms_avatar');
-      return avatar ? { ...u, avatar } : u;
+      return null;
     } catch { return null; }
   });
   const [toast, setToastState] = useState({ message: '', type: 'success' });
@@ -272,19 +274,20 @@ function AppContent() {
     const avatar = localStorage.getItem(userData.email + '_lms_avatar');
     const newUser = avatar ? { ...userData, avatar } : { ...userData };
 
-    // Keep lms_user in sync so legacy components still work
-    const { avatar: _a, ...userWithoutAvatar } = newUser;
-    try { localStorage.setItem('lms_user', JSON.stringify(userWithoutAvatar)); } catch { /* quota */ }
-    if (newUser.name)  localStorage.setItem(newUser.email + '_lms_p_name',  newUser.name);
+    // Persist non-sensitive profile prefs in localStorage (cross-tab ok)
+    if (newUser.name) localStorage.setItem(newUser.email + '_lms_p_name', newUser.name);
     if (newUser.email) localStorage.setItem(newUser.email + '_lms_p_email', newUser.email);
-    if (newUser.role)  localStorage.setItem(newUser.email + '_lms_p_role',  newUser.role);
+    if (newUser.role) localStorage.setItem(newUser.email + '_lms_p_role', newUser.role);
 
     setUser(newUser);
   };
 
   const handleLogout = () => {
     setUser(null);
-    // Clear all auth storage — both JWT and legacy keys
+    // Clear this tab's session data only (sessionStorage is tab-scoped)
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('user_data');
+    // Also clear any legacy localStorage keys that may exist
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
     localStorage.removeItem('lms_user');
@@ -302,14 +305,14 @@ function AppContent() {
 
       <main className="flex-1">
         <Routes>
-          <Route path="/"          element={<Home user={user} />} />
-          <Route path="/catalogs"  element={<Catalogs user={user} onNotify={setToast} />} />
+          <Route path="/" element={<Home user={user} />} />
+          <Route path="/catalogs" element={<Catalogs user={user} onNotify={setToast} />} />
 
           {/* Admin Portal (System Control) */}
           <Route path="/admin-port" element={
             user ? (
-              user.role === 'admin' ? 
-                <AdminDashboard user={user} onNotify={setToast} /> : 
+              user.role === 'admin' ?
+                <AdminDashboard user={user} onNotify={setToast} /> :
                 <UnauthorizedAccess portalName="Administrator" onLogout={handleLogout} />
             ) : (
               <Auth isAdminPortal={true} onAuthSuccess={handleAuthSuccess} onNotify={setToast} />
@@ -319,31 +322,31 @@ function AppContent() {
           {/* Librarian Portal (Library Operations) */}
           <Route path="/librarian-port" element={
             user ? (
-              user.role === 'librarian' ? 
-                <LibrarianDashboard user={user} onNotify={setToast} /> : 
+              user.role === 'librarian' ?
+                <LibrarianDashboard user={user} onNotify={setToast} /> :
                 <UnauthorizedAccess portalName="Librarian" onLogout={handleLogout} />
             ) : (
               <Auth isLibrarianPortal={true} onAuthSuccess={handleAuthSuccess} onNotify={setToast} />
             )
           } />
 
-          <Route path="/dashboard/faculty" element={<ProtectedRoute allowedRoles={['admin', 'librarian', 'faculty']}><LibrarianDashboard user={user} onNotify={setToast} /></ProtectedRoute>} />
+          <Route path="/dashboard/faculty" element={<ProtectedRoute allowedRoles={['admin', 'librarian', 'faculty']}><StudentDashboard user={user} onNotify={setToast} /></ProtectedRoute>} />
           <Route path="/dashboard/student" element={<ProtectedRoute allowedRoles={['admin', 'librarian', 'faculty', 'student']}><StudentDashboard user={user} onNotify={setToast} /></ProtectedRoute>} />
 
           {/* /dashboard — smart redirect to role-specific dashboard */}
           <Route path="/dashboard" element={
             user ? (
               user.role === 'admin' ? <Navigate to="/admin-port" replace /> :
-              user.role === 'librarian' ? <Navigate to="/librarian-port" replace /> :
-              user.role === 'faculty' ? <Navigate to="/dashboard/faculty" replace /> :
-              <Navigate to="/dashboard/student" replace />
+                user.role === 'librarian' ? <Navigate to="/librarian-port" replace /> :
+                  user.role === 'faculty' ? <Navigate to="/dashboard/faculty" replace /> :
+                    <Navigate to="/dashboard/student" replace />
             ) : <Navigate to="/auth" replace />
           } />
 
-          <Route path="/profile"   element={<ProtectedRoute><Profile user={user} onAvatarChange={handleAvatarChange} /></ProtectedRoute>} />
-          <Route path="/pricing"   element={<Pricing />} />
-          <Route path="/auth"      element={<Auth onAuthSuccess={handleAuthSuccess} onNotify={setToast} />} />
-          
+          <Route path="/profile" element={<ProtectedRoute><Profile user={user} onAvatarChange={handleAvatarChange} /></ProtectedRoute>} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/auth" element={<Auth onAuthSuccess={handleAuthSuccess} onNotify={setToast} />} />
+
           {/* Catch-all 404 Route */}
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center p-12 text-center page-enter">

@@ -93,6 +93,12 @@
 ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.7); }
 
+/* Global Smooth Scroll for Scrollable Elements */
+.overflow-y-auto, .overflow-auto, [class*="overflow-y-scroll"] {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── Dark dropdown fix (all native select elements) ──────────────────────── */
 select {
   background-color: #0f172a !important;  /* slate-900 */
@@ -132,3 +138,407 @@ select.input-field {
 .animate-scale-in {
   animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Hero dashboard preview float */
+@keyframes hero-float {
+  0%, 100% { transform: perspective(1200px) rotateX(6deg) translateY(0px); }
+  50%       { transform: perspective(1200px) rotateX(6deg) translateY(-10px); }
+}
+.animate-hero-float {
+  animation: hero-float 5s ease-in-out infinite;
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+
+/* Command palette slide-down */
+@keyframes palette-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-palette-in { animation: palette-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Floating Bulk Action Bar — slides up from bottom */
+@keyframes floatBarIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
+}
+
+/* ── Admin Light Mode CSS Overrides ──────────────────────── */
+.admin-light-mode {
+  background-color: #f8fafc !important; /* slate-50 background for clean, modern app feel */
+}
+
+/* Sidebar styling overrides */
+.admin-light-mode aside {
+  background-color: #ffffff !important;
+  border-right-color: rgba(15, 23, 42, 0.06) !important;
+  box-shadow: 4px 0 24px -4px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Sidebar header text */
+.admin-light-mode aside h2 {
+  background-image: linear-gradient(to bottom right, #0f172a, #334155) !important;
+  color: transparent !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+.admin-light-mode aside p.text-slate-400,
+.admin-light-mode aside span.text-slate-400 {
+  color: #64748b !important; /* slate-500 */
+}
+
+.admin-light-mode aside .bg-white {
+  background-color: #6366f1 !important; /* indicator dot */
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5) !important;
+}
+
+/* Global Search trigger button in sidebar */
+.admin-light-mode aside button.bg-slate-800\/60 {
+  background-color: #f1f5f9 !important; /* slate-100 */
+  border-color: rgba(15, 23, 42, 0.06) !important;
+  color: #64748b !important;
+}
+
+.admin-light-mode aside button.bg-slate-800\/60:hover {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.admin-light-mode aside kbd {
+  background-color: #cbd5e1 !important;
+  color: #334155 !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Sidebar Navigation Buttons */
+.admin-light-mode aside button.text-slate-400 {
+  color: #475569 !important; /* slate-600 */
+}
+
+.admin-light-mode aside button.text-slate-400:hover {
+  color: #0f172a !important; /* slate-900 */
+  background-color: #f1f5f9 !important;
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.admin-light-mode aside button .text-slate-500 {
+  color: #64748b !important;
+}
+
+.admin-light-mode aside button:hover .text-slate-500 {
+  color: #334155 !important;
+}
+
+/* Active navigation button */
+.admin-light-mode aside button.text-indigo-300 {
+  color: #4f46e5 !important; /* indigo-600 */
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.08) !important;
+}
+
+.admin-light-mode aside button.text-indigo-300 .text-indigo-400 {
+  color: #4f46e5 !important;
+}
+
+.admin-light-mode aside .bg-indigo-500 {
+  background-color: #4f46e5 !important;
+}
+
+/* Sidebar badge counts */
+.admin-light-mode aside button.text-indigo-300 .text-indigo-200 {
+  color: #4f46e5 !important;
+  background-color: rgba(99, 102, 241, 0.12) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.admin-light-mode aside button .text-rose-200 {
+  color: #e11d48 !important;
+  background-color: rgba(244, 63, 94, 0.1) !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
+  box-shadow: none !important;
+}
+
+/* Sidebar dark/light mode toggle switch */
+.admin-light-mode aside .border-t {
+  border-top-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.admin-light-mode aside button.border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+  color: #475569 !important;
+}
+
+.admin-light-mode aside button.border-white\/5:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.admin-light-mode aside .bg-slate-800 {
+  background-color: #e2e8f0 !important;
+}
+
+/* Main glassmorphism card structure */
+.admin-light-mode .card-glass {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(15, 23, 42, 0.06) !important;
+  backdrop-filter: blur(24px) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Basic text visibility overrides */
+.admin-light-mode [class~="text-white"] {
+  color: #0f172a !important; /* slate-900 */
+}
+
+.admin-light-mode [class~="text-slate-100"] {
+  color: #0f172a !important; /* slate-900 */
+}
+
+.admin-light-mode [class~="text-slate-200"] {
+  color: #1e293b !important; /* slate-800 */
+}
+
+.admin-light-mode [class~="text-slate-300"] {
+  color: #334155 !important; /* slate-700 */
+}
+
+.admin-light-mode [class~="text-slate-400"] {
+  color: #475569 !important; /* slate-600 */
+}
+
+.admin-light-mode [class~="text-slate-500"] {
+  color: #64748b !important; /* slate-500 */
+}
+
+/* Custom UI cards glow and background overrides */
+.admin-light-mode .bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.admin-light-mode .bg-slate-800 {
+  background-color: #f8fafc !important; /* slate-50 */
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.admin-light-mode .bg-slate-950\/40 {
+  background-color: rgba(15, 23, 42, 0.01) !important;
+}
+
+/* Inputs and interactive elements */
+.admin-light-mode .input-field {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
+}
+
+.admin-light-mode .input-field::placeholder {
+  color: #94a3b8 !important;
+}
+
+.admin-light-mode select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  color-scheme: light !important;
+}
+
+.admin-light-mode select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Dropdown portals */
+.admin-light-mode .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.15) !important;
+}
+
+.admin-light-mode .bg-slate-900\/80 button {
+  color: #334155 !important;
+}
+
+.admin-light-mode .bg-slate-900\/80 button:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.admin-light-mode .bg-slate-900\/80 button.text-indigo-300 {
+  color: #4f46e5 !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+/* Borders overrides */
+.admin-light-mode .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.admin-light-mode .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.admin-light-mode .border-white\/15 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.admin-light-mode .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+.admin-light-mode .border-white\/30 {
+  border-color: rgba(15, 23, 42, 0.25) !important;
+}
+
+/* Tables rows background and styling */
+.admin-light-mode .bg-slate-800\/50 {
+  background-color: #f8fafc !important; /* slate-50 headers */
+}
+
+.admin-light-mode tr.hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+
+.admin-light-mode button.hover\:bg-white\/5:hover,
+.admin-light-mode div.hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Modals */
+.admin-light-mode .bg-slate-950\/80 {
+  background-color: rgba(15, 23, 42, 0.45) !important; /* semi-transparent slate-900 overlay */
+}
+
+.admin-light-mode .bg-slate-950\/80 .bg-slate-900 {
+  background-color: #ffffff !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Command Palette items & search inputs */
+.admin-light-mode .bg-slate-950\/80 input {
+  color: #0f172a !important;
+}
+
+.admin-light-mode .bg-slate-950\/80 input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Circulation overview chart grid/column bars */
+.admin-light-mode .bg-slate-800\/60 {
+  background-color: #e2e8f0 !important; /* slate-200 base for bars */
+}
+
+/* Buttons primary & status highlights */
+.admin-light-mode .btn-primary {
+  color: #ffffff !important; /* ensure white text inside indigo action buttons remains white */
+}
+
+.admin-light-mode .text-emerald-400 {
+  color: #16a34a !important; /* green-600 */
+}
+
+.admin-light-mode .bg-emerald-500\/10 {
+  background-color: rgba(22, 163, 74, 0.08) !important;
+}
+
+.admin-light-mode .border-emerald-500\/20 {
+  border-color: rgba(22, 163, 74, 0.15) !important;
+}
+
+.admin-light-mode .text-red-400 {
+  color: #dc2626 !important; /* red-600 */
+}
+
+.admin-light-mode .bg-red-500\/10 {
+  background-color: rgba(220, 38, 38, 0.08) !important;
+}
+
+.admin-light-mode .border-red-500\/20 {
+  border-color: rgba(220, 38, 38, 0.15) !important;
+}
+
+.admin-light-mode .text-indigo-400 {
+  color: #4f46e5 !important; /* indigo-600 */
+}
+
+.admin-light-mode .bg-indigo-500\/10 {
+  background-color: rgba(79, 70, 229, 0.08) !important;
+}
+
+.admin-light-mode .border-indigo-500\/20 {
+  border-color: rgba(79, 70, 229, 0.15) !important;
+}
+
+.admin-light-mode .text-blue-400 {
+  color: #2563eb !important; /* blue-600 */
+}
+
+.admin-light-mode .bg-blue-500\/10 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+.admin-light-mode .border-blue-500\/20 {
+  border-color: rgba(37, 99, 235, 0.15) !important;
+}
+
+.admin-light-mode .text-purple-400 {
+  color: #7c3aed !important; /* purple-600 */
+}
+
+.admin-light-mode .bg-purple-500\/20 {
+  background-color: rgba(124, 58, 237, 0.1) !important;
+}
+
+.admin-light-mode .text-amber-400 {
+  color: #d97706 !important; /* amber-600 */
+}
+
+.admin-light-mode .bg-amber-500\/10 {
+  background-color: rgba(217, 119, 6, 0.08) !important;
+}
+
+.admin-light-mode .border-amber-500\/20 {
+  border-color: rgba(217, 119, 6, 0.15) !important;
+}
+
+/* User management specific rows/badges/headers */
+.admin-light-mode .text-indigo-300 {
+  color: #4f46e5 !important;
+}
+
+.admin-light-mode .bg-indigo-600\/20 {
+  background-color: rgba(79, 70, 229, 0.1) !important;
+}
+
+.admin-light-mode .bg-slate-800\/80 {
+  background-color: #f1f5f9 !important;
+}
+
+/* Ensure icons on buttons inside lists aren't dark-on-dark */
+.admin-light-mode button [class~="text-white"],
+.admin-light-mode button[class*="bg-"] *,
+.admin-light-mode button[class*="bg-"],
+.admin-light-mode .btn-primary,
+.admin-light-mode .btn-primary * {
+  color: #ffffff !important;
+}
+
+/* GlassSelect custom styles inside light mode */
+.admin-light-mode .border-indigo-500\/60 {
+  border-color: #4f46e5 !important;
+}
+
+/* Custom scrollbars in light mode */
+.admin-light-mode ::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+}
+.admin-light-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+

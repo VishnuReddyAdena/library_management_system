@@ -8,7 +8,8 @@ const {
   Book,
   Member,
   Transaction,
-  PurchaseOrder
+  PurchaseOrder,
+  Settings,
 } = require('../models/Library');
 const { User, AuditLog } = require('../models/User');
 
@@ -372,6 +373,75 @@ router.post('/audit-logs/', authMiddleware, async (req, res) => {
     return res.status(201).json({ success: true, log });
   } catch (err) {
     console.error('Error saving audit log:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Settings Routes ──────────────────────────────────────────────────────────
+// GET system settings (returns singleton, creates default if none exists)
+router.get('/settings/', authMiddleware, async (req, res) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create({});
+    }
+    return res.status(200).json(settings);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT system settings (upsert singleton)
+router.put('/settings/', authMiddleware, async (req, res) => {
+  try {
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      { $set: req.body },
+      { new: true, upsert: true, runValidators: true }
+    );
+    return res.status(200).json(settings);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// ─── Health Endpoint ───────────────────────────────────────────────────────────
+router.get('/health/', async (req, res) => {
+  const start = Date.now();
+  const uptimeSeconds = Math.floor(process.uptime());
+  const hours = Math.floor(uptimeSeconds / 3600);
+  const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+  const seconds = uptimeSeconds % 60;
+  const uptimeStr = hours > 0
+    ? `${hours}h ${minutes}m ${seconds}s`
+    : minutes > 0
+      ? `${minutes}m ${seconds}s`
+      : `${seconds}s`;
+  const ping = Date.now() - start;
+  return res.status(200).json({
+    status: 'ok',
+    uptime: uptimeStr,
+    uptimeSeconds,
+    ping,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ─── Users by Role Route ───────────────────────────────────────────────────────
+router.get('/users/', authMiddleware, async (req, res) => {
+  try {
+    const { role } = req.query;
+    const query = role ? { role } : {};
+    const users = await User.find(query).select('-passwordHash').lean();
+    return res.status(200).json(users.map(u => ({
+      id: u._id.toString(),
+      email: u.email,
+      role: u.role,
+      status: u.status,
+      last_login: u.last_login,
+      createdAt: u.createdAt,
+    })));
+  } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });

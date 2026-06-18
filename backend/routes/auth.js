@@ -18,9 +18,14 @@ const cleanCache = () => {
 };
 
 router.post('/register', async (req, res) => {
-  const { email, password, role } = req.body;
-  if (!email || !password) {
+  const { email, password, role, name } = req.body;
+  if (!email || !password || !name) {
     return res.status(400).json({ success: false, message: "Validation error", code: "VALIDATION_FAILED" });
+  }
+
+  // Validate email format
+  if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email)) {
+    return res.status(400).json({ success: false, message: "Email must be in the format ******@gmail.com." });
   }
 
   try {
@@ -29,8 +34,15 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: "An account with this email already exists." });
     }
 
+    // Check name uniqueness (case-insensitive)
+    const existingName = await User.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
+    if (existingName) {
+      return res.status(400).json({ success: false, message: "use another name .not available!" });
+    }
+
     const user = new User({
       email: email.toLowerCase(),
+      name: name.trim(),
       role: role || 'student',
       status: 'active',
       is_staff: role === 'admin' || role === 'librarian',
@@ -59,6 +71,11 @@ router.post('/login', async (req, res) => {
 
   if (!email || !password) {
     return res.status(400).json({ success: false, message: "Validation error", code: "VALIDATION_FAILED" });
+  }
+
+  // Validate email format
+  if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email)) {
+    return res.status(400).json({ success: false, message: "Email must be in the format ******@gmail.com." });
   }
 
   const ip = req.ip || req.connection.remoteAddress;
@@ -116,7 +133,11 @@ router.post('/login', async (req, res) => {
   }
 
   if (roleRequested && user.role !== roleRequested) {
-    return res.status(403).json({ success: false, message: "Invalid role for this account.", code: "ROLE_MISMATCH" });
+    const isStudentOrFacultyRequested = roleRequested === 'student' || roleRequested === 'faculty';
+    const isUserStudentOrFaculty = user.role === 'student' || user.role === 'faculty';
+    if (!(isStudentOrFacultyRequested && isUserStudentOrFaculty)) {
+      return res.status(403).json({ success: false, message: "Invalid role for this account.", code: "ROLE_MISMATCH" });
+    }
   }
 
   if (user.locked_until && user.locked_until > now) {
@@ -204,7 +225,7 @@ router.post('/login', async (req, res) => {
   return res.status(200).json({
     success: true,
     access: accessToken,
-    user: { id: user._id.toString(), email: user.email, role: user.role }
+    user: { id: user._id.toString(), email: user.email, role: user.role, name: user.name }
   });
 });
 

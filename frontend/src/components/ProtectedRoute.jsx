@@ -3,8 +3,8 @@ import { Navigate, useLocation, Link } from 'react-router-dom';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
-  const token = localStorage.getItem('access_token');
-  const userDataString = localStorage.getItem('user_data');
+  const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+  const userDataString = sessionStorage.getItem('user_data') || localStorage.getItem('user_data');
   
   if (!token || !userDataString) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
@@ -28,6 +28,8 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     }
     return children;
   } catch (err) {
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('user_data');
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
     return <Navigate to="/auth" state={{ from: location }} replace />;

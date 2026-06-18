@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   Mail, Lock, User, AlertCircle, ArrowRight,
-  BookOpen, CheckCircle, Eye, EyeOff, Sparkles,
+  CheckCircle, Eye, EyeOff, Sparkles,
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GlassSelect from './GlassSelect';
 import authService from '../services/authService';
+import logoImg from '../logo.png';
 
 // ─── Local user store (fallback when backend is unavailable) ─────────────────
 const LOCAL_USERS_KEY = 'lms_registered_users';
@@ -32,22 +33,24 @@ function findLocalUser(email, password, role) {
 
 // ─── Sign-Up Form ─────────────────────────────────────────────────────────────
 function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
-  const [email, setEmail]       = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm]   = useState('');
-  const [role, setRole]         = useState(isAdminPortal ? 'admin' : (isLibrarianPortal ? 'librarian' : 'student'));
-  const [showPw, setShowPw]     = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [errors, setErrors]     = useState({});
+  const [confirm, setConfirm] = useState('');
+  const [role, setRole] = useState(isAdminPortal ? 'admin' : (isLibrarianPortal ? 'librarian' : 'student'));
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
-  const [success, setSuccess]   = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const validate = () => {
     const e = {};
-    if (!email || !/\S+@\S+\.\S+/.test(email)) e.email    = 'Valid email is required.';
-    if (!password || password.length < 8)       e.password = 'Min. 8 characters required.';
-    if (password !== confirm)                   e.confirm  = 'Passwords do not match.';
-    if (!role)                                  e.role     = 'Please select a role.';
+    if (!name || name.trim() === '') e.name = 'Name is required.';
+    if (!email || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email)) e.email = 'Email must be in the format ******@gmail.com.';
+    if (!password || password.length < 8) e.password = 'Min. 8 characters required.';
+    if (password !== confirm) e.confirm = 'Passwords do not match.';
+    if (!role) e.role = 'Please select a role.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -57,23 +60,40 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
     setGlobalError('');
     if (!validate()) return;
 
-    // Check duplicate in local store
+    // Check duplicate email in local store
     const existing = getLocalUsers().find(u => u.email === email);
     if (existing) {
       setGlobalError('An account with this email already exists. Please sign in.');
       return;
     }
 
+    // Check duplicate name in local store
+    const existingName = getLocalUsers().find(u => u.name && u.name.toLowerCase() === name.toLowerCase());
+    if (existingName) {
+      setGlobalError('use another name .not available!');
+      return;
+    }
+
     setLoading(true);
     try {
       // Try backend first — if it works, great
-      await authService.post('/api/auth/register/', { email, password, role });
-    } catch {
+      const res = await authService.post('/api/auth/register/', { email, password, role, name });
+      if (res.data && !res.data.success) {
+        setGlobalError(res.data.message || 'Registration failed.');
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
       // Backend unavailable or endpoint missing → fall back to local store silently
+      if (err.response && err.response.data && err.response.data.message) {
+        setGlobalError(err.response.data.message);
+        setLoading(false);
+        return;
+      }
     }
 
     // Always save locally so sign-in works immediately
-    saveLocalUser({ email, password, role });
+    saveLocalUser({ email, password, role, name });
 
     if (onNotify) onNotify('Account created successfully! Please sign in.');
     setLoading(false);
@@ -128,23 +148,42 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
           <p className="text-sm text-red-200">{globalError}</p>
         </div>
       )}
-{/* Role selection only on public portal */}
-{!isAdminPortal && !isLibrarianPortal && (
-  <div>
-    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-      Portal Role
-    </label>
-    <GlassSelect
-      value={role}
-      onChange={setRole}
-        options={[
-          { label: 'Student',   value: 'student'   },
-          { label: 'Faculty',   value: 'faculty'   },
-        ]}
-    />
-    {errors.role && <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.role}</p>}
-  </div>
-)}
+      {/* Role selection only on public portal */}
+      {!isAdminPortal && !isLibrarianPortal && (
+        <div>
+          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            Portal Role
+          </label>
+          <GlassSelect
+            value={role}
+            onChange={setRole}
+            options={[
+              { label: 'Student', value: 'student' },
+              { label: 'Faculty', value: 'faculty' },
+            ]}
+          />
+          {errors.role && <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.role}</p>}
+        </div>
+      )}
+
+      {/* Name */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          Full Name
+        </label>
+        <div className="relative">
+          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className={`input-field !pl-10 ${errors.name ? 'border-red-500' : ''}`}
+            placeholder="Your Name"
+            autoComplete="name"
+          />
+        </div>
+        {errors.name && <p className="text-red-400 text-xs mt-1 ml-1">{errors.name}</p>}
+      </div>
 
       {/* Email */}
       <div>
@@ -242,19 +281,19 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
 // ─── Sign-In Form ─────────────────────────────────────────────────────────────
 function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrarianPortal }) {
   const navigate = useNavigate();
-  const [email, setEmail]       = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole]         = useState(isAdminPortal ? 'admin' : (isLibrarianPortal ? 'librarian' : 'student'));
-  const [showPw, setShowPw]     = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [errors, setErrors]     = useState({});
+  const [role, setRole] = useState(isAdminPortal ? 'admin' : (isLibrarianPortal ? 'librarian' : 'student'));
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
 
   const validate = () => {
     const e = {};
-    if (!email || !/\S+@\S+\.\S+/.test(email)) e.email    = 'Valid email is required.';
-    if (!password || password.length < 8)       e.password = 'Password must be at least 8 characters.';
-    if (!role)                                  e.role     = 'Role must be selected.';
+    if (!email || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email)) e.email = 'Email must be in the format ******@gmail.com.';
+    if (!password || password.length < 8) e.password = 'Password must be at least 8 characters.';
+    if (!role) e.role = 'Role must be selected.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -263,15 +302,16 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
     const userData = { name: localUser.name, email: localUser.email, role: localUser.role };
     // Create a mock JWT payload
     const fakeAccess = btoa(JSON.stringify({ ...userData, exp: Date.now() + 86400000 }));
-    localStorage.setItem('access_token', fakeAccess);
-    localStorage.setItem('user_data', JSON.stringify(userData));
+    // sessionStorage is tab-scoped — each tab keeps its own session
+    sessionStorage.setItem('access_token', fakeAccess);
+    sessionStorage.setItem('user_data', JSON.stringify(userData));
     if (onAuthSuccess) onAuthSuccess(userData);
     if (onNotify) onNotify(`Welcome back, ${userData.name || userData.email.split('@')[0]}!`);
-    
-    if (userData.role === 'admin')          navigate('/admin-port');
+
+    if (userData.role === 'admin') navigate('/admin-port');
     else if (userData.role === 'librarian') navigate('/librarian-port');
-    else if (userData.role === 'faculty')   navigate('/dashboard/faculty');
-    else                                    navigate('/dashboard/student');
+    else if (userData.role === 'faculty') navigate('/dashboard/faculty');
+    else navigate('/dashboard/student');
   };
 
   const handleSubmit = async (ev) => {
@@ -285,15 +325,16 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
       const res = await authService.post('/api/auth/login/', { email, password, role });
       if (res.data.success) {
         const { access, user } = res.data;
-        localStorage.setItem('access_token', access);
-        localStorage.setItem('user_data', JSON.stringify(user));
+        // sessionStorage is tab-scoped — each tab keeps its own session
+        sessionStorage.setItem('access_token', access);
+        sessionStorage.setItem('user_data', JSON.stringify(user));
         if (onAuthSuccess) onAuthSuccess(user);
         if (onNotify) onNotify(`Welcome back, ${user.name || user.email.split('@')[0]}!`);
-        
-        if (user.role === 'admin')          navigate('/admin-port');
+
+        if (user.role === 'admin') navigate('/admin-port');
         else if (user.role === 'librarian') navigate('/librarian-port');
-        else if (user.role === 'faculty')   navigate('/dashboard/faculty');
-        else                                navigate('/dashboard/student');
+        else if (user.role === 'faculty') navigate('/dashboard/faculty');
+        else navigate('/dashboard/student');
         return;
       }
     } catch (err) {
@@ -305,10 +346,10 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
           setLoading(false);
           return;
         } else if (status === 401 || status === 403) {
-           // Invalid credentials or role mismatch etc
-           setGlobalError(data.message || 'Invalid credentials.');
-           setLoading(false);
-           return;
+          // Invalid credentials or role mismatch etc
+          setGlobalError(data.message || 'Invalid credentials.');
+          setLoading(false);
+          return;
         } else if (status === 429) {
           setGlobalError('Too many attempts. Please wait 15 minutes.');
           setLoading(false);
@@ -338,7 +379,7 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
       )}
 
       {/* Email */}
-...
+      ...
       <div>
         <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
           Email Address
@@ -434,20 +475,25 @@ export default function Auth({ onNotify, onAuthSuccess, isAdminPortal = false, i
       <div className="w-full max-w-md relative z-10 page-enter">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
-            <BookOpen className="w-7 h-7 text-white" />
+          <div className="relative mx-auto mb-5 w-20 h-20 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 blur-xl" />
+            <img
+              src={logoImg}
+              alt="LibraryOS"
+              className="relative w-20 h-20 object-contain drop-shadow-[0_0_18px_rgba(99,102,241,0.7)] hover:scale-105 transition-transform duration-300"
+            />
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">
             {isAdminPortal ? 'Admin Portal Access' : (isLibrarianPortal ? 'Librarian Portal Access' : (mode === 'signup' ? 'Create Account' : 'Welcome Back'))}
           </h1>
           <p className="text-slate-400 mt-2 text-sm max-w-sm mx-auto">
-            {isAdminPortal 
-              ? 'Authorized personnel only. Please verify your credentials.' 
+            {isAdminPortal
+              ? 'Authorized personnel only. Please verify your credentials.'
               : (isLibrarianPortal
-                  ? 'Library Operations Control Center. Authorized access only.'
-                  : (mode === 'signup'
-                      ? 'Join LibraryOS and access your institutional library.'
-                      : 'Securely sign in to access your workspace.'))}
+                ? 'Library Operations Control Center. Authorized access only.'
+                : (mode === 'signup'
+                  ? 'Join LibraryOS and access your institutional library.'
+                  : 'Securely sign in to access your workspace.'))}
           </p>
         </div>
 
@@ -456,17 +502,16 @@ export default function Auth({ onNotify, onAuthSuccess, isAdminPortal = false, i
           <div className="flex bg-slate-900/60 p-1 rounded-xl border border-white/5 mb-6">
             {[
               { key: 'signup', label: 'Sign Up' },
-              { key: 'login',  label: 'Sign In' },
+              { key: 'login', label: 'Sign In' },
             ].map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => switchTo(key)}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${
-                  mode === key
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${mode === key
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
                     : 'text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 {label}
               </button>

@@ -12,7 +12,8 @@ const authService = axios.create({
 
 authService.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    // Use sessionStorage so each tab keeps its own session
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,12 +35,12 @@ authService.interceptors.response.use(
         const response = await axios.post(`${API_URL}/api/auth/refresh/`, {}, { withCredentials: true });
         const { access } = response.data;
 
-        localStorage.setItem('access_token', access);
+        sessionStorage.setItem('access_token', access);
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return authService(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_data');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('user_data');
         window.location.href = '/auth';
         return Promise.reject(refreshError);
       }

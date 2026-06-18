@@ -28,6 +28,20 @@ function useLocalStorage(key, initialValue) {
     }
   }, [key, value]);
 
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === key) {
+        try {
+          setValue(e.newValue ? JSON.parse(e.newValue) : initialValue);
+        } catch (err) {
+          console.error('Error syncing localStorage on event', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [key, initialValue]);
+
   return [value, setValue];
 }
 
@@ -39,10 +53,10 @@ const ISSUED_BOOKS = [
 ];
 
 const MEMBERS = [
-  { id: 'M001', name: 'John Doe', type: 'Student', expiry: '2026-01-01', status: 'Active' },
-  { id: 'M002', name: 'Priya Nair', type: 'Faculty', expiry: '2025-06-30', status: 'Active' },
-  { id: 'M003', name: 'Rahul Singh', type: 'Student', expiry: '2025-04-10', status: 'Expiring' },
-  { id: 'M004', name: 'Alice Johnson', type: 'Student', expiry: '2024-12-31', status: 'Expired' },
+  { id: 'M001', name: 'John Doe', email: 'john.doe@gmail.com', type: 'Student', expiry: '2026-01-01', status: 'Active' },
+  { id: 'M002', name: 'Priya Nair', email: 'priya.nair@gmail.com', type: 'Faculty', expiry: '2025-06-30', status: 'Active' },
+  { id: 'M003', name: 'Rahul Singh', email: 'rahul.singh@gmail.com', type: 'Student', expiry: '2025-04-10', status: 'Expiring' },
+  { id: 'M004', name: 'Alice Johnson', email: 'alice.johnson@gmail.com', type: 'Student', expiry: '2024-12-31', status: 'Expired' },
 ];
 
 const ORDERS = [
@@ -71,9 +85,10 @@ const MOCK_BOOKS_CATALOG = [
 ];
 
 const MOCK_RESERVATIONS = [
-  { id: 'RES001', memberId: 'M003', member: 'Rahul Singh', bookId: 'B002', title: 'System Design Interview', date: '2025-04-10', status: 'Pending' },
-  { id: 'RES002', memberId: 'M001', member: 'John Doe', bookId: 'B004', title: 'Deep Learning', date: '2025-04-12', status: 'Approved' },
-  { id: 'RES003', memberId: 'M004', member: 'Alice Johnson', bookId: 'B002', title: 'System Design Interview', date: '2025-04-13', status: 'Pending' },
+  { id: 'RES001', memberId: 'M003', member: 'Rahul Singh', bookId: 'B002', title: 'System Design Interview', date: '2025-04-10', requestedOn: '2025-04-10', status: 'Pending', availableDate: 'Unknown' },
+  { id: 'RES002', memberId: 'M001', member: 'John Doe', bookId: 'B004', title: 'Deep Learning', date: '2025-04-12', requestedOn: '2025-04-12', status: 'Approved', availableDate: '2025-04-15' },
+  { id: 'RES003', memberId: 'M004', member: 'Alice Johnson', bookId: 'B002', title: 'System Design Interview', date: '2025-04-13', requestedOn: '2025-04-13', status: 'Pending', availableDate: 'Unknown' },
+  { id: 'RES101', memberId: 'M001', member: 'John Doe', bookId: 'B001', title: 'Clean Architecture', date: '2025-04-01', requestedOn: '2025-04-01', status: 'Pending', availableDate: '2025-04-18' }
 ];
 
 const MOCK_PAYMENTS = [
@@ -107,6 +122,9 @@ const TABS = [
   { key: 'circulation',   label: 'Issue / Return',   icon: RotateCcw   },
   { key: 'reservations',  label: 'Reservations',     icon: Calendar    },
   { key: 'payments',      label: 'Payments',         icon: CreditCard  },
+  { key: 'orders',        label: 'Purchase Orders',  icon: ShoppingCart},
+  { key: 'publishers',    label: 'Publishers',       icon: Package     },
+  { key: 'authors',       label: 'Authors',          icon: BookOpen    },
   { key: 'reports',       label: 'Reports',          icon: FileText    },
   { key: 'logs',          label: 'Audit Logs',       icon: FileText    },
 ];
@@ -127,25 +145,25 @@ function StatCard({ icon: Icon, label, value, sub, color }) {
   );
 }
 
-function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, user }) {
+function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, user, onNotify }) {
   const [memberId, setMemberId] = useLocalStorage('library_quick_memberId', '');
   const [isbn, setIsbn] = useLocalStorage('library_quick_isbn', '');
   const [memberSearch, setMemberSearch] = useState('');
 
   const handleQuickIssue = () => {
     if (!memberId || !isbn) {
-      alert("Please enter both Member ID and Book ISBN.");
+      if (onNotify) onNotify('Please enter both Member ID and Book ISBN.', 'error');
       return;
     }
 
     if (issuedBooks.some(b => b.memberId === memberId && b.status === 'issued')) {
-      alert("No duplicated data is allowed");
+      if (onNotify) onNotify('This member already has an active issued book record.', 'error');
       return;
     }
 
     const memberObj = MEMBERS.find(m => m.id === memberId);
     if (!memberObj) {
-      alert("Member not found! (Try M001 or M002 for mock data)");
+      if (onNotify) onNotify('Member not found! (Try M001 or M002 for mock data)', 'error');
       return;
     }
     const bookToAdd = {
@@ -162,19 +180,19 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, use
     setIssuedBooks([bookToAdd, ...issuedBooks]);
     addActivity(`"${bookToAdd.book}" issued to ${memberObj.name}`, 'issue');
     addAuditLog(`Issued book "${bookToAdd.book}" (ISBN: ${isbn}) to ${memberObj.name}`, 'success', user?.name || 'Librarian');
-    alert(`Book ${isbn} successfully issued to ${memberObj.name}. (Check Circulation Tab)`);
+    if (onNotify) onNotify(`Book ${isbn} successfully issued to ${memberObj.name}.`);
     setMemberId('');
     setIsbn('');
   };
 
   const handleQuickReturn = () => {
     if (!isbn) {
-      alert("Please enter at least the Book ISBN to return.");
+      if (onNotify) onNotify('Please enter at least the Book ISBN to return.', 'error');
       return;
     }
     const bookIndex = issuedBooks.findIndex(b => b.isbn === isbn && b.status === 'issued' && (memberId ? b.memberId === memberId : true));
     if (bookIndex === -1) {
-      alert("No active record found for this ISBN.");
+      if (onNotify) onNotify('No active record found for this ISBN.', 'error');
       return;
     }
     const updated = [...issuedBooks];
@@ -194,7 +212,7 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, use
       addActivity(`Fine of ₹${finalFine} registered for ${memberName}`, 'fine');
       addAuditLog(`Late fine of ₹${finalFine} registered for ${memberName}`, 'warning', user?.name || 'Librarian');
     }
-    alert(`Reference ${isbn} successfully returned!`);
+    if (onNotify) onNotify(`Reference ${isbn} successfully returned!`);
     setMemberId('');
     setIsbn('');
   };
@@ -234,7 +252,7 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, use
                 <div key={m.id} className="p-4 hover:bg-white/5 rounded-xl flex items-center justify-between cursor-default transition-colors">
                   <div>
                     <p className="text-white font-semibold flex items-center gap-2">{m.name} <span className="badge bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] tracking-wider">{m.id}</span></p>
-                    <p className="text-slate-400 text-xs mt-1">{m.email}</p>
+                    <p className="text-slate-400 text-xs mt-1">{m.type} · Expires {m.expiry}</p>
                   </div>
                   <span className={`badge border ${m.status === 'Active' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : m.status === 'Expired' ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30'}`}>
                     {m.status === 'Expired' ? 'Frozen' : m.status}
@@ -339,7 +357,7 @@ function Overview({ onSwitchTab, issuedBooks, setIssuedBooks, members, logs, use
   );
 }
 
-function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
+function Circulation({ issuedBooks, setIssuedBooks, members, addActivity, user }) {
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [newBook, setNewBook] = useLocalStorage('library_draft_newBook', { member: '', memberId: '', book: '', isbn: '', dueDate: '' });
 
@@ -353,6 +371,9 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
   const [otpError, setOtpError] = useState('');
   const [returnProof, setReturnProof] = useState(null);
   const [otpSent, setOtpSent] = useState(false);
+  const [otpRequested, setOtpRequested] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Email Alert Modal State
   const [emailModal, setEmailModal] = useState(null); // { to, subject, body }
@@ -405,11 +426,18 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
   const handleReturnClick = (book) => {
     setReturnModalBook(book);
     setReturnMethod('email');
-    setReturnEmail('');
-    setReturnPhone('');
+    
+    // Lookup member's email or phone if available
+    const memberObj = members.find(m => m.id === book.memberId || m.name === book.member);
+    setReturnEmail(memberObj?.email || '');
+    setReturnPhone(memberObj?.phone || '');
+    
     setReturnCode('');
     setReturnProof(null);
     setOtpSent(false);
+    setOtpRequested(false);
+    setOtpVerified(false);
+    setIsVerifying(false);
     setActualOtp(null);
     setOtpError('');
   };
@@ -425,6 +453,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
     authService.post('/api/otp/send', { type: returnMethod, destination: destination })
       .then(response => {
         setOtpSent(true);
+        setOtpRequested(true);
         if (response.data.simulated) {
           setActualOtp(response.data.otp); // fallback local storage for mock verification
           alert(`[OTP SIMULATION]\n${response.data.message}\n\nTo: ${destination}\nVerification Code: ${response.data.otp}`);
@@ -444,35 +473,17 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
     }, 15000);
   };
 
-  const confirmReturn = (e) => {
-    e.preventDefault();
-    if (!returnCode) return;
+  const handleVerifyOtp = (e) => {
+    e?.preventDefault();
+    if (!returnCode || returnCode.length !== 6) return;
+    setIsVerifying(true);
     setOtpError('');
 
     const destination = returnMethod === 'email' ? returnEmail : returnPhone;
 
-    const completeReturn = () => {
-      let calculatedFine = 0;
-      setIssuedBooks(issuedBooks.map(b => {
-        if (b.id === returnModalBook.id) {
-          calculatedFine = b.fine || 0;
-          const due = new Date(b.dueDate);
-          const now = new Date();
-          if (due < now) {
-            const daysLeft = (due - now) / 86400000;
-            calculatedFine += Math.floor(Math.max(daysLeft * -1, 1)) * 10;
-          }
-          return { ...b, status: 'returned', fine: calculatedFine, returnedOn: now.toISOString() };
-        }
-        return b;
-      }));
-      addActivity(`"${returnModalBook.book}" formally returned by ${returnModalBook.member}`, 'return');
-      addAuditLog(`Returned book "${returnModalBook.book}" (ISBN: ${returnModalBook.isbn}) from ${returnModalBook.member}`, 'success', user?.name || 'Librarian');
-      if (calculatedFine > (returnModalBook.fine || 0)) {
-        addActivity(`System mapped fine of ₹${calculatedFine} for ${returnModalBook.member}`, 'fine');
-        addAuditLog(`Late fine of ₹${calculatedFine} registered for ${returnModalBook.member}`, 'warning', user?.name || 'Librarian');
-      }
-      setReturnModalBook(null);
+    const completeVerification = () => {
+      setOtpVerified(true);
+      setIsVerifying(false);
     };
 
     if (!actualOtp) {
@@ -480,24 +491,54 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
       authService.post('/api/otp/verify', { destination: destination, otp: returnCode })
         .then(response => {
           if (response.data.success) {
-            completeReturn();
+            completeVerification();
           } else {
             setOtpError(response.data.error || 'Invalid code!');
+            setIsVerifying(false);
           }
         })
         .catch(err => {
           console.error(err);
           const errorMsg = err.response?.data?.error || err.message || 'Failed to verify code with server.';
           setOtpError(errorMsg);
+          setIsVerifying(false);
         });
     } else {
       // Local simulation fallback verification
       if (returnCode.trim() !== actualOtp) {
         setOtpError('Invalid code!');
+        setIsVerifying(false);
         return;
       }
-      completeReturn();
+      completeVerification();
     }
+  };
+
+  const confirmReturn = (e) => {
+    e.preventDefault();
+    if (!otpVerified) return;
+
+    let calculatedFine = 0;
+    setIssuedBooks(issuedBooks.map(b => {
+      if (b.id === returnModalBook.id) {
+        calculatedFine = b.fine || 0;
+        const due = new Date(b.dueDate);
+        const now = new Date();
+        if (due < now) {
+          const daysLeft = (due - now) / 86400000;
+          calculatedFine += Math.floor(Math.max(daysLeft * -1, 1)) * 10;
+        }
+        return { ...b, status: 'returned', fine: calculatedFine, returnedOn: now.toISOString() };
+      }
+      return b;
+    }));
+    addActivity(`"${returnModalBook.book}" formally returned by ${returnModalBook.member}`, 'return');
+    addAuditLog(`Returned book "${returnModalBook.book}" (ISBN: ${returnModalBook.isbn}) from ${returnModalBook.member}`, 'success', user?.name || 'Librarian');
+    if (calculatedFine > (returnModalBook.fine || 0)) {
+      addActivity(`System mapped fine of ₹${calculatedFine} for ${returnModalBook.member}`, 'fine');
+      addAuditLog(`Late fine of ₹${calculatedFine} registered for ${returnModalBook.member}`, 'warning', user?.name || 'Librarian');
+    }
+    setReturnModalBook(null);
   };
 
   const handleUndoReturn = (id) => {
@@ -579,9 +620,15 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
                     type="button"
                     onClick={handleGetOtp}
                     disabled={otpSent || (returnMethod === 'email' ? !returnEmail : !returnPhone)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors bg-indigo-600 hover:bg-indigo-500 text-white disabled:bg-emerald-600 disabled:opacity-50"
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300
+                      ${otpSent 
+                        ? 'bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]' 
+                        : (returnMethod === 'email' ? !returnEmail : !returnPhone)
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                          : 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer'
+                      }`}
                   >
-                    {otpSent ? 'OTP Sent!' : 'Get OTP'}
+                    {otpSent ? 'Sent' : 'Get OTP'}
                   </button>
                 </div>
                 <button
@@ -599,22 +646,42 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">6-Digit Verification Code</label>
-                <input
-                  required type="text"
-                  value={returnCode}
-                  onChange={e => {
-                    setReturnCode(e.target.value);
-                    if (otpError) setOtpError('');
-                  }}
-                  disabled={!otpSent && !returnCode}
-                  className={`input-field tracking-widest text-lg font-mono text-center py-3 disabled:opacity-50 disabled:cursor-not-allowed ${otpError ? 'border-red-500 bg-red-500/10 text-red-100 placeholder-red-300' : ''}`}
-                  placeholder="------" maxLength={6}
-                />
+                <div className="relative">
+                  <input
+                    required
+                    type="text"
+                    value={returnCode}
+                    onChange={e => {
+                      setReturnCode(e.target.value.replace(/\D/g, ''));
+                      if (otpError) setOtpError('');
+                    }}
+                    disabled={!otpRequested || otpVerified}
+                    className={`input-field tracking-widest text-lg font-mono text-center py-3 pr-28 disabled:opacity-50 disabled:cursor-not-allowed ${otpError ? 'border-red-500 bg-red-500/10 text-red-100 placeholder-red-300' : ''}`}
+                    placeholder="------"
+                    maxLength={6}
+                  />
+                  {otpVerified ? (
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">
+                      <CheckCircle className="w-3.5 h-3.5" /> Verified
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={!otpRequested || returnCode.length !== 6 || isVerifying}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 disabled:bg-slate-800 disabled:text-slate-500"
+                    >
+                      {isVerifying ? 'Verifying...' : 'Verify'}
+                    </button>
+                  )}
+                </div>
                 {otpError ? (
                   <p className="text-[12px] text-red-500 mt-1.5 text-center font-bold">{otpError}</p>
                 ) : (
                   <p className="text-[10px] text-slate-400 mt-1.5 text-center">
-                    {otpSent ? `Enter the code sent to the member's ${returnMethod}.` : 'Request OTP to enable code entry.'}
+                    {otpVerified
+                      ? 'Verification successful! You may now confirm the return.'
+                      : (otpRequested ? `Enter the code sent to the member's ${returnMethod}.` : 'Request OTP to enable code entry.')}
                   </p>
                 )}
               </div>
@@ -626,7 +693,7 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
                   <input type="file" accept="image/*" className="hidden" onChange={e => setReturnProof(e.target.files[0])} />
                 </label>
               </div>
-              <button type="submit" disabled={!returnCode} className="w-full btn-primary bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25 justify-center py-3">Confirm Return</button>
+              <button type="submit" disabled={!otpVerified} className="w-full btn-primary bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25 justify-center py-3 disabled:opacity-50 disabled:cursor-not-allowed">Confirm Return</button>
             </form>
           </div>
         </div>
@@ -692,9 +759,10 @@ function Circulation({ issuedBooks, setIssuedBooks, addActivity, user }) {
                   <td className="px-5 py-4 text-slate-300 text-sm">
                     <div className="flex items-center gap-2">
                       {row.book}
-                      {isOverdue && row.status !== 'returned' && <Pin className="w-3.5 h-3.5 text-red-500 fill-red-500 rotate-45" title="Overdue Book" />}
+                      {isOverdue && row.status !== 'returned' && row.status !== 'Pending Approval' && <Pin className="w-3.5 h-3.5 text-red-500 fill-red-500 rotate-45" title="Overdue Book" />}
                     </div>
                     {row.status === 'returned' && <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-400">Returned</span>}
+                    {row.status === 'Pending Approval' && <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30">Verification Pending</span>}
                   </td>
                   <td className="px-5 py-4 text-slate-500 text-xs font-mono">{row.isbn}</td>
                   <td className="px-5 py-4 text-slate-400 text-sm">{row.issuedOn}</td>
@@ -1017,10 +1085,11 @@ function MembersTab({ members, setMembers, addActivity, user }) {
   );
 }
 
-function OrdersTab() {
+function OrdersTab({ onNotify, user }) {
   const [orders, setOrders] = useLocalStorage('library_orders', ORDERS);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [newOrder, setNewOrder] = useLocalStorage('library_draft_newOrder', { publisher: '', items: '', amount: '' });
+  const [editOrder, setEditOrder] = useState(null);
 
   const handleCreateOrder = (e) => {
     e.preventDefault();
@@ -1039,6 +1108,17 @@ function OrdersTab() {
     setOrders([addedOrder, ...orders]);
     setShowOrderModal(false);
     setNewOrder({ publisher: '', items: '', amount: '' });
+    if (onNotify) onNotify('Purchase order created successfully.');
+    addAuditLog(`Created purchase order for ${addedOrder.publisher} (${addedOrder.items} books)`, 'success', user?.name || 'Librarian');
+  };
+
+  const handleEditOrder = (e) => {
+    e.preventDefault();
+    if (!editOrder) return;
+    setOrders(orders.map(o => o.id === editOrder.id ? { ...editOrder, items: parseInt(editOrder.items), amount: parseFloat(editOrder.amount) } : o));
+    if (onNotify) onNotify('Purchase order updated successfully.');
+    addAuditLog(`Updated purchase order ${editOrder.id} for ${editOrder.publisher}`, 'info', user?.name || 'Librarian');
+    setEditOrder(null);
   };
 
   const statusCls = { Pending: 'bg-amber-500/15 text-amber-400 border-amber-500/30', Shipped: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', Received: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
@@ -1081,6 +1161,46 @@ function OrdersTab() {
         </div>
       )}
 
+      {/* Edit Order Modal */}
+      {editOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setEditOrder(null)} className="absolute top-4 right-4 text-slate-400 hover:text-red-400 transition-colors z-10 bg-slate-900/50 rounded-full">
+              <XCircle className="w-6 h-6" />
+            </button>
+            <h3 className="text-lg font-bold text-white mb-4">Edit Order <span className="text-indigo-400 font-mono text-sm">{editOrder.id}</span></h3>
+            <form onSubmit={handleEditOrder} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Publisher</label>
+                <input required type="text" value={editOrder.publisher} onChange={e => setEditOrder({ ...editOrder, publisher: e.target.value })} className="input-field py-2" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Number of Books</label>
+                  <input required type="number" min="1" value={editOrder.items} onChange={e => setEditOrder({ ...editOrder, items: e.target.value })} className="input-field py-2" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Total Amount (₹)</label>
+                  <input required type="number" min="0" step="0.01" value={editOrder.amount} onChange={e => setEditOrder({ ...editOrder, amount: e.target.value })} className="input-field py-2" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
+                <GlassSelect
+                  value={editOrder.status}
+                  onChange={v => setEditOrder({ ...editOrder, status: v })}
+                  options={['Pending', 'Shipped', 'Received']}
+                />
+              </div>
+              <div className="flex gap-3">
+                <button type="submit" className="btn-primary flex-1 justify-center py-2.5"><CheckCircle className="w-4 h-4" /> Save Changes</button>
+                <button type="button" onClick={() => setEditOrder(null)} className="flex-1 py-2.5 text-sm font-bold rounded-xl border border-white/10 text-slate-400 hover:text-white transition-colors">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="card-glass overflow-hidden">
         <table className="w-full">
           <thead>
@@ -1099,9 +1219,9 @@ function OrdersTab() {
                 <td className="px-5 py-4 text-slate-300 text-sm font-semibold">₹{o.amount.toLocaleString()}</td>
                 <td className="px-5 py-4"><span className={`badge border ${statusCls[o.status]}`}>{o.status}</span></td>
                 <td className="px-5 py-4 flex gap-2">
-                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"><Edit3 className="w-4 h-4" /></button>
+                  <button onClick={() => setEditOrder({ ...o })} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all" title="Edit Order"><Edit3 className="w-4 h-4" /></button>
                   {o.status === 'Shipped' && (
-                    <button onClick={() => setOrders(orders.map(or => or.id === o.id ? { ...or, status: 'Received' } : or))} className="text-xs px-3 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg border border-emerald-500/30 transition-all">Accession</button>
+                    <button onClick={() => { setOrders(orders.map(or => or.id === o.id ? { ...or, status: 'Received' } : or)); addAuditLog(`Marked order ${o.id} as Received`, 'success', user?.name || 'Librarian'); if (onNotify) onNotify(`Order ${o.id} marked as Received.`); }} className="text-xs px-3 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg border border-emerald-500/30 transition-all">Accession</button>
                   )}
                 </td>
               </tr>
@@ -1112,6 +1232,7 @@ function OrdersTab() {
     </div>
   );
 }
+
 
 function PublishersTab({ publishers, setPublishers }) {
   const [showModal, setShowModal] = useState(false);
@@ -1570,11 +1691,46 @@ function ReservationsTab({ reservations, setReservations, user }) {
 }
 
 // ─── Payments Tab ─────────────────────────────────────────────────────────────
-function PaymentsTab({ payments, setPayments, user }) {
+function PaymentsTab({ payments, setPayments, issuedBooks, setIssuedBooks, user }) {
+  const [selectedPayment, setSelectedPayment] = useState(null);
+
   const verified = payments.filter(p => p.status === 'Verified').reduce((a,b) => a+b.amount, 0);
-  const pending  = payments.filter(p => p.status === 'Pending').reduce((a,b) => a+b.amount, 0);
+  const pending  = payments.filter(p => p.status === 'Pending' || p.status === 'Pending Verification').reduce((a,b) => a+b.amount, 0);
+
+  const handleVerify = (payment) => {
+    // Update payment status to Verified
+    setPayments(payments.map(x => x.id === payment.id ? { ...x, status: 'Verified' } : x));
+    
+    // Update the corresponding issued book to returned
+    if (payment.bookId && issuedBooks && setIssuedBooks) {
+      setIssuedBooks(issuedBooks.map(b => b.id === payment.bookId ? { 
+        ...b, 
+        status: 'returned', 
+        fine: 0, 
+        returnedOn: new Date().toISOString() 
+      } : b));
+    }
+    
+    addAuditLog(`Verified payment of ₹${payment.amount} from ${payment.member} & returned book`, 'success', user?.name || 'Librarian');
+  };
+
+  const handleReject = (payment) => {
+    // Update payment status to Rejected
+    setPayments(payments.map(x => x.id === payment.id ? { ...x, status: 'Rejected' } : x));
+    
+    // Revert the issued book status back to issued
+    if (payment.bookId && issuedBooks && setIssuedBooks) {
+      setIssuedBooks(issuedBooks.map(b => b.id === payment.bookId ? { 
+        ...b, 
+        status: 'issued'
+      } : b));
+    }
+    
+    addAuditLog(`Rejected return payment of ₹${payment.amount} from ${payment.member}`, 'warning', user?.name || 'Librarian');
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in text-white">
       <h2 className="section-title mb-0">Payments Ledger</h2>
       <div className="grid grid-cols-2 gap-4">
         <div className="card-glass p-6 text-center border border-emerald-500/20 bg-emerald-500/5">
@@ -1595,16 +1751,38 @@ function PaymentsTab({ payments, setPayments, user }) {
             {payments.map(p => (
               <tr key={p.id} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-xs font-mono text-indigo-400">{p.id}</td>
-                <td className="p-4"><p className="text-sm font-bold text-white">{p.member}</p><p className="text-xs text-slate-500">{p.memberId}</p></td>
+                <td className="p-4">
+                  <p className="text-sm font-bold text-white">{p.member}</p>
+                  <p className="text-xs text-slate-500">{p.memberId}</p>
+                </td>
                 <td className="p-4 text-sm font-black text-slate-200">₹{p.amount.toFixed(2)}</td>
-                <td className="p-4 text-sm text-slate-400">{p.type}</td>
+                <td className="p-4 text-sm text-slate-400">
+                  <div>{p.type}</div>
+                  {p.bookTitle && <div className="text-[10px] text-slate-500 italic mt-0.5 truncate max-w-[180px]">For: {p.bookTitle}</div>}
+                </td>
                 <td className="p-4 text-sm text-slate-400">{p.date}</td>
                 <td className="p-4">
-                  <span className={`badge border ${p.status==='Verified' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'}`}>{p.status}</span>
+                  <span className={`badge border ${p.status==='Verified' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : p.status==='Rejected' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'}`}>{p.status}</span>
                 </td>
                 <td className="p-4">
-                  {p.status === 'Pending' && (
-                    <button onClick={() => { setPayments(payments.map(x => x.id===p.id ? {...x, status:'Verified'} : x)); addAuditLog(`Verified payment of ₹${p.amount} from ${p.member}`, 'success', user?.name || 'Librarian'); }} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Verify</button>
+                  {(p.status === 'Pending' || p.status === 'Pending Verification') && (
+                    <div className="flex gap-2">
+                      {p.status === 'Pending Verification' ? (
+                        <button 
+                          onClick={() => setSelectedPayment(p)}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 transition-all"
+                        >
+                          View & Verify
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleVerify(p)} 
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white"
+                        >
+                          Verify
+                        </button>
+                      )}
+                    </div>
                   )}
                 </td>
               </tr>
@@ -1612,6 +1790,72 @@ function PaymentsTab({ payments, setPayments, user }) {
           </tbody>
         </table>
       </div>
+
+      {/* Receipt Screenshot Viewer Modal */}
+      {selectedPayment && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in text-white">
+          <div className="bg-slate-900 border border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setSelectedPayment(null)} className="absolute top-4 right-4 text-slate-400 hover:text-red-400 transition-colors z-10 bg-slate-900/50 rounded-full">
+              <XCircle className="w-6 h-6" />
+            </button>
+            <h3 className="text-lg font-bold text-white mb-4">Verification Receipt</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
+                <span className="text-slate-400">Receipt ID:</span>
+                <span className="text-white font-mono">{selectedPayment.id}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
+                <span className="text-slate-400">Member:</span>
+                <span className="text-white font-bold">{selectedPayment.member} ({selectedPayment.memberId})</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
+                <span className="text-slate-400">Book:</span>
+                <span className="text-white font-medium">{selectedPayment.bookTitle || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
+                <span className="text-slate-400">Amount Paid:</span>
+                <span className="text-emerald-400 font-bold">₹{selectedPayment.amount.toFixed(2)}</span>
+              </div>
+              
+              <div>
+                <span className="block text-slate-400 text-sm mb-2">Receipt Screenshot:</span>
+                {selectedPayment.screenshot ? (
+                  <div className="border border-white/10 rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-64">
+                    <img src={selectedPayment.screenshot} alt="Receipt Screenshot" className="max-w-full max-h-64 object-contain" />
+                  </div>
+                ) : (
+                  <div className="p-8 border border-dashed border-white/10 rounded-xl text-center text-slate-500 text-xs">
+                    No screenshot uploaded
+                  </div>
+                )}
+              </div>
+              
+              {selectedPayment.status === 'Pending Verification' && (
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => {
+                      handleVerify(selectedPayment);
+                      setSelectedPayment(null);
+                    }}
+                    className="flex-1 btn-primary bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25 justify-center py-2.5"
+                  >
+                    Approve Return
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleReject(selectedPayment);
+                      setSelectedPayment(null);
+                    }}
+                    className="flex-1 border border-red-500/30 text-red-400 hover:bg-red-500/10 font-bold py-2.5 rounded-xl text-sm transition-all text-center"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1964,7 +2208,12 @@ export default function Dashboard({ user, onNotify }) {
   const [booksCatalog, setBooksCatalog] = useLocalStorage('library_books_catalog', MOCK_BOOKS_CATALOG);
   const [reservations, setReservations] = useLocalStorage('library_reservations', MOCK_RESERVATIONS);
   const [payments, setPayments] = useLocalStorage('library_payments', MOCK_PAYMENTS);
+  const [publishers, setPublishers] = useLocalStorage('library_publishers', PUBLISHERS);
+  const [authors, setAuthors] = useLocalStorage('library_authors', AUTHORS);
   const [activityLog, setActivityLog] = useLocalStorage('library_activity_log', RECENT_ACTIVITY.map((a, i) => ({ ...a, timestamp: Date.now() - (i * 3600000) })));
+
+  const pendingReservationsCount = reservations.filter(r => r.status === 'Pending').length;
+  const pendingPaymentsCount = payments.filter(p => p.status === 'Pending' || p.status === 'Pending Verification').length;
 
   const addActivity = (text, type) => {
     setActivityLog(prev => [{ text, type, timestamp: Date.now() }, ...prev].slice(0, 15));
@@ -2016,12 +2265,15 @@ export default function Dashboard({ user, onNotify }) {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview':     return <Overview onSwitchTab={setActiveTab} issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} members={members} logs={logs} user={user} />;
+      case 'overview':     return <Overview onSwitchTab={setActiveTab} issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} members={members} logs={logs} user={user} onNotify={onNotify} />;
       case 'books':        return <BooksManagementTab books={booksCatalog} setBooks={setBooksCatalog} onNotify={onNotify} user={user} />;
       case 'users':        return <MembersTab members={members} setMembers={setMembers} addActivity={addActivity} user={user} />;
-      case 'circulation':  return <Circulation issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} addActivity={addActivity} user={user} />;
+      case 'circulation':  return <Circulation issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} members={members} addActivity={addActivity} user={user} />;
       case 'reservations': return <ReservationsTab reservations={reservations} setReservations={setReservations} user={user} />;
-      case 'payments':     return <PaymentsTab payments={payments} setPayments={setPayments} user={user} />;
+      case 'payments':     return <PaymentsTab payments={payments} setPayments={setPayments} issuedBooks={issuedBooks} setIssuedBooks={setIssuedBooks} user={user} />;
+      case 'orders':       return <OrdersTab onNotify={onNotify} user={user} />;
+      case 'publishers':   return <PublishersTab publishers={publishers} setPublishers={setPublishers} />;
+      case 'authors':      return <AuthorsTab authors={authors} setAuthors={setAuthors} />;
       case 'reports':      return <ReportsTab issuedBooks={issuedBooks} members={members} payments={payments} />;
       case 'logs':         return <LogsTab logs={logs} />;
       default: return null;
@@ -2051,6 +2303,10 @@ export default function Dashboard({ user, onNotify }) {
           <div className="flex flex-col gap-2">
             {TABS.map(tab => {
               const isActive = activeTab === tab.key;
+              const badgeCount = {
+                reservations: pendingReservationsCount,
+                payments: pendingPaymentsCount,
+              }[tab.key] || 0;
               return (
                 <button
                   key={tab.key}
@@ -2068,7 +2324,17 @@ export default function Dashboard({ user, onNotify }) {
                   
                   <tab.icon className={`w-4 h-4 transition-transform duration-300 relative z-10 ${isActive ? 'text-indigo-400 scale-110 ml-1' : 'text-slate-500 group-hover:scale-110 group-hover:text-slate-300'}`} />
                   <span className="tracking-wide relative z-10">{tab.label}</span>
-                  {isActive && <ChevronRight className="w-4 h-4 ml-auto text-indigo-400 opacity-50 relative z-10 transform translate-x-1" />}
+                  {badgeCount > 0 && (
+                    <span className={`flex items-center justify-center h-5 px-1.5 min-w-[20px] text-[10px] font-black rounded-full relative z-10 ml-auto transition-all duration-300
+                      ${isActive
+                        ? 'text-indigo-200 bg-indigo-500/30 border border-indigo-500/40 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
+                        : 'text-rose-200 bg-rose-500/20 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse'
+                      }`}
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
+                  {isActive && <ChevronRight className={`w-4 h-4 text-indigo-400 opacity-50 relative z-10 transform translate-x-1 ${badgeCount > 0 ? 'ml-1.5' : 'ml-auto'}`} />}
                 </button>
               );
             })}
