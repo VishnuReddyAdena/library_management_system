@@ -5,6 +5,7 @@
 .env.test
 .env.production
 backend/.env
+backend/.env.example
 frontend/.env
 
 # Python
