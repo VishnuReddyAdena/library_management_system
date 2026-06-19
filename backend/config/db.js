@@ -18,13 +18,15 @@ const connectDB = async () => {
       isInMemory = false;
     }
 
-    const conn = await mongoose.connect(mongoUri);
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000 // fail fast after 5s if Atlas is blocking or down
+    });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return mongoUri;
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error.message}`);
-    process.exit(1);
+    throw error;
   }
 };
 
@@ -40,7 +42,15 @@ const disconnectDB = async () => {
 };
 
 const getDbStatus = () => {
-  return isInMemory ? 'Ephemeral In-Memory' : 'Persistent MongoDB Atlas/URI';
+  const states = {
+    0: 'Disconnected ❌',
+    1: 'Connected ✅',
+    2: 'Connecting ⏳',
+    3: 'Disconnecting ⏳',
+  };
+  const state = mongoose.connection.readyState;
+  const type = isInMemory ? 'Ephemeral In-Memory' : 'Persistent MongoDB Atlas/URI';
+  return `${type} (${states[state] || 'Unknown'})`;
 };
 
 module.exports = { connectDB, disconnectDB, getDbStatus };

@@ -84,9 +84,14 @@ function SignUpForm({ onSwitch, onNotify, isAdminPortal, isLibrarianPortal }) {
         return;
       }
     } catch (err) {
-      // Backend unavailable or endpoint missing → fall back to local store silently
       if (err.response && err.response.data && err.response.data.message) {
         setGlobalError(err.response.data.message);
+        setLoading(false);
+        return;
+      } else {
+        setGlobalError(err.message === 'Network Error' || err.code === 'ECONNABORTED'
+          ? 'Unable to connect to the backend server. Please check if the server is running and accessible.'
+          : `Connection error: ${err.message || 'Unknown error'}`);
         setLoading(false);
         return;
       }
@@ -354,7 +359,17 @@ function SignInForm({ onSwitch, onNotify, onAuthSuccess, isAdminPortal, isLibrar
           setGlobalError('Too many attempts. Please wait 15 minutes.');
           setLoading(false);
           return;
+        } else if (status === 503) {
+          setGlobalError(data.message || 'Database connection error.');
+          setLoading(false);
+          return;
         }
+      } else {
+        setGlobalError(err.message === 'Network Error' || err.code === 'ECONNABORTED'
+          ? 'Unable to connect to the backend server. Please check if the server is running and accessible.'
+          : `Connection error: ${err.message || 'Unknown error'}`);
+        setLoading(false);
+        return;
       }
     }
 

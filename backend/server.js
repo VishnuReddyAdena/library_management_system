@@ -25,6 +25,19 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Database connection check middleware to fail fast if DB is offline
+app.use((req, res, next) => {
+  const mongoose = require('mongoose');
+  if (req.path !== '/' && mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection is not established. If you are using MongoDB Atlas, please check your network settings and IP whitelist.',
+      code: 'DATABASE_DISCONNECTED'
+    });
+  }
+  next();
+});
+
 // Register API Routes
 const authRouter = require('./routes/auth');
 const libraryRouter = require('./routes/library');
@@ -56,12 +69,16 @@ app.use((err, req, res, next) => {
 
 // Database connection and startup sequence
 const startServer = async () => {
-  const mongoUri = await connectDB();
-  
-  // If it's a memory database or local uri, auto-seed the schema
-  if (mongoUri.includes('127.0.0.1') || mongoUri.includes('localhost') || mongoUri.startsWith('mongodb://')) {
-    console.log('Seeding initial mock database tables...');
-    await seed(mongoUri);
+  try {
+    const mongoUri = await connectDB();
+    
+    // If it's a memory database or local uri, auto-seed the schema
+    if (mongoUri.includes('127.0.0.1') || mongoUri.includes('localhost') || mongoUri.startsWith('mongodb://')) {
+      console.log('Seeding initial mock database tables...');
+      await seed(mongoUri);
+    }
+  } catch (error) {
+    console.error('Database connection failed during startup. Starting server in degraded mode:', error.message);
   }
 
   app.listen(PORT, () => {
