@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_UR
 const authService = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 10000, // 10 seconds timeout
+  timeout: 60000, // 60 seconds timeout (allows Render free tier cold-start to wake up)
   headers: {
     'Content-Type': 'application/json',
   }
