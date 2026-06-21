@@ -93,6 +93,15 @@ const ISSUED_BOOKS = [
   { id: 3, member: 'Rahul Singh', memberId: 'M003', book: 'Deep Learning', isbn: '9780262035613', issuedOn: '2025-03-25', dueDate: '2025-04-08', fine: 0, status: 'issued' },
 ];
 
+const MOCK_PAYMENTS = [
+  { id: 'PAY-1101', member: 'Priya Nair', memberId: 'M002', amount: 27.00, type: 'Late Fine', status: 'Verified', date: '2025-04-11', paymentMethod: 'UPI' },
+  { id: 'PAY-1102', member: 'Rahul Singh', memberId: 'M003', amount: 15.00, type: 'Lost Book', status: 'Pending', date: '2025-04-12', paymentMethod: 'UPI' },
+  { id: 'PAY-1103', member: 'Alice Johnson', memberId: 'M004', amount: 5.00, type: 'Late Fine', status: 'Pending', date: '2025-04-13', paymentMethod: 'UPI' },
+  { id: 'PAY-1104', member: 'John Doe', memberId: 'M001', amount: 20.00, type: 'Late Fine', status: 'Verified', date: '2025-04-14', bookTitle: 'Clean Code', paymentMethod: 'Card' },
+  { id: 'PAY-1105', member: 'John Doe', memberId: 'M001', amount: 50.00, type: 'Late Fine', status: 'Verified', date: '2025-04-15', bookTitle: 'The Pragmatic Programmer', paymentMethod: 'UPI' },
+];
+
+
 const MOCK_CATALOG = [
   { id: 201, title: 'Clean Code', author: 'Robert C. Martin', isbn: '978-0132350884', status: 'Available', category: 'Software' },
   { id: 202, title: 'System Design Interview', author: 'Alex Xu', isbn: '979-8664653403', status: 'Unavailable', category: 'Engineering' },
@@ -136,7 +145,7 @@ export default function StudentDashboard({ user, onNotify }) {
   
   // Synchronized storage state
   const [allIssuedBooks, setAllIssuedBooks] = useLocalStorage('library_issuedBooks', ISSUED_BOOKS);
-  const [allPayments, setAllPayments] = useLocalStorage('library_payments', []);
+  const [allPayments, setAllPayments] = useLocalStorage('library_payments', MOCK_PAYMENTS);
   const [members, setMembers] = useLocalStorage('library_members', MEMBERS);
   const [catalog, setCatalog] = useLocalStorage('library_books_catalog', MOCK_CATALOG);
   const [reservations, setReservations] = useLocalStorage('library_reservations', MOCK_RESERVATIONS);
@@ -194,7 +203,25 @@ export default function StudentDashboard({ user, onNotify }) {
       ];
       setAllIssuedBooks([...seedBooks, ...allIssuedBooks]);
     }
-  }, [user, members, allIssuedBooks, setMembers, setAllIssuedBooks]);
+
+    const hasPayments = allPayments.some(p => p.memberId === currentMemberId);
+    if (!hasPayments) {
+      const seedPayments = [
+        {
+          id: `PAY-${Date.now() + 20}`,
+          member: currentMemberName,
+          memberId: currentMemberId,
+          amount: 25.00,
+          type: 'Late Fine',
+          status: 'Verified',
+          date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
+          bookTitle: 'Clean Code',
+          paymentMethod: 'UPI'
+        }
+      ];
+      setAllPayments([...seedPayments, ...allPayments]);
+    }
+  }, [user, members, allIssuedBooks, allPayments, setMembers, setAllIssuedBooks, setAllPayments]);
 
   // Resolve student/faculty details from library_members
   const studentMember = members.find(m => m.email?.toLowerCase() === user?.email?.toLowerCase()) || {
@@ -255,6 +282,32 @@ export default function StudentDashboard({ user, onNotify }) {
 
   // Derive reservations scoped to student (ignoring Cancelled status)
   const studentReservations = reservations.filter(r => (r.memberId === memberId || (!r.memberId && memberId === 'M001')) && r.status !== 'Cancelled');
+
+  const overdueMembersList = allIssuedBooks
+    .filter(b => b.status === 'issued' && new Date(b.dueDate) < new Date())
+    .map(b => {
+      const memb = members.find(m => m.id === b.memberId) || { type: 'Student' };
+      const isMembFaculty = memb.type?.toLowerCase() === 'faculty';
+      const membPolicy = isMembFaculty ? POLICIES.faculty : POLICIES.student;
+      
+      const due = new Date(b.dueDate);
+      const now = new Date();
+      const diffTime = Math.max(now - due, 0);
+      const diffDays = Math.floor(diffTime / 86400000);
+      const calcFine = (b.fine || 0) + (diffDays * membPolicy.dailyFine);
+
+      return {
+        id: b.id,
+        member: b.member,
+        memberId: b.memberId,
+        memberType: memb.type || 'Student',
+        book: b.book,
+        isbn: b.isbn,
+        dueDate: b.dueDate,
+        daysOverdue: diffDays,
+        fine: calcFine
+      };
+    });
 
   const studentApprovedCount = studentReservations.filter(r => r.status === 'Approved').length;
   const studentOverdueCount = loans.filter(l => l.status === 'Overdue').length;
@@ -814,6 +867,51 @@ export default function StudentDashboard({ user, onNotify }) {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* Overdue Board (All Members) */}
+            <div className="card-glass p-6 border border-white/5 rounded-2xl mt-6">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500" /> Overdue Board (All Members)
+              </h2>
+              {overdueMembersList.length === 0 ? (
+                <div className="text-center py-6 text-slate-500 font-medium text-sm">
+                  <CheckCircle className="w-10 h-10 mx-auto mb-2 opacity-30 text-emerald-400" />
+                  No members with overdue items!
+                </div>
+              ) : (
+                <div className="overflow-hidden border border-white/5 rounded-xl">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead>
+                      <tr className="bg-slate-800/30 border-b border-white/10 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="p-3">Member</th>
+                        <th className="p-3">Book Title</th>
+                        <th className="p-3">Due Date</th>
+                        <th className="p-3">Days Overdue</th>
+                        <th className="p-3 text-right">Fine Accrued</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {overdueMembersList.map((item, i) => (
+                        <tr key={i} className="hover:bg-white/3 transition-colors">
+                          <td className="p-3">
+                            <p className="font-bold text-white">{item.member}</p>
+                            <p className="text-[10px] text-slate-500 font-mono">{item.memberId} · {item.memberType}</p>
+                          </td>
+                          <td className="p-3 font-semibold text-slate-200">{item.book}</td>
+                          <td className="p-3 font-mono text-slate-400">{item.dueDate}</td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                              {item.daysOverdue} days
+                            </span>
+                          </td>
+                          <td className="p-3 text-right font-black text-amber-400">₹{item.fine}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

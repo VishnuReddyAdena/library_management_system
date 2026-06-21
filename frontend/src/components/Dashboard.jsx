@@ -92,10 +92,13 @@ const MOCK_RESERVATIONS = [
 ];
 
 const MOCK_PAYMENTS = [
-  { id: 'PAY-1101', member: 'Priya Nair', memberId: 'M002', amount: 27.00, type: 'Late Fine', status: 'Verified', date: '2025-04-11' },
-  { id: 'PAY-1102', member: 'Rahul Singh', memberId: 'M003', amount: 15.00, type: 'Lost Book', status: 'Pending', date: '2025-04-12' },
-  { id: 'PAY-1103', member: 'Alice Johnson', memberId: 'M004', amount: 5.00, type: 'Late Fine', status: 'Pending', date: '2025-04-13' },
+  { id: 'PAY-1101', member: 'Priya Nair', memberId: 'M002', amount: 27.00, type: 'Late Fine', status: 'Verified', date: '2025-04-11', paymentMethod: 'UPI' },
+  { id: 'PAY-1102', member: 'Rahul Singh', memberId: 'M003', amount: 15.00, type: 'Lost Book', status: 'Pending', date: '2025-04-12', paymentMethod: 'UPI' },
+  { id: 'PAY-1103', member: 'Alice Johnson', memberId: 'M004', amount: 5.00, type: 'Late Fine', status: 'Pending', date: '2025-04-13', paymentMethod: 'UPI' },
+  { id: 'PAY-1104', member: 'John Doe', memberId: 'M001', amount: 20.00, type: 'Late Fine', status: 'Verified', date: '2025-04-14', bookTitle: 'Clean Code', paymentMethod: 'Card' },
+  { id: 'PAY-1105', member: 'John Doe', memberId: 'M001', amount: 50.00, type: 'Late Fine', status: 'Verified', date: '2025-04-15', bookTitle: 'The Pragmatic Programmer', paymentMethod: 'UPI' },
 ];
+
 
 const RECENT_ACTIVITY = [
   { text: '"Clean Code" issued to John Doe', time: '10m ago', type: 'issue' },
@@ -1776,8 +1779,8 @@ function PaymentsTab({ payments, setPayments, issuedBooks, setIssuedBooks, user 
                         </button>
                       ) : (
                         <button 
-                          onClick={() => handleVerify(p)} 
-                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white"
+                          onClick={() => setSelectedPayment(p)} 
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/30 transition-all"
                         >
                           Verify
                         </button>
@@ -1813,6 +1816,14 @@ function PaymentsTab({ payments, setPayments, issuedBooks, setIssuedBooks, user 
                 <span className="text-white font-medium">{selectedPayment.bookTitle || 'N/A'}</span>
               </div>
               <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
+                <span className="text-slate-400">Payment Type:</span>
+                <span className="text-white font-medium">{selectedPayment.type || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
+                <span className="text-slate-400">Date:</span>
+                <span className="text-white font-medium">{selectedPayment.date || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2 text-sm">
                 <span className="text-slate-400">Amount Paid:</span>
                 <span className="text-emerald-400 font-bold">₹{selectedPayment.amount.toFixed(2)}</span>
               </div>
@@ -1830,7 +1841,7 @@ function PaymentsTab({ payments, setPayments, issuedBooks, setIssuedBooks, user 
                 )}
               </div>
               
-              {selectedPayment.status === 'Pending Verification' && (
+              {(selectedPayment.status === 'Pending' || selectedPayment.status === 'Pending Verification') && (
                 <div className="flex gap-3 pt-2">
                   <button 
                     onClick={() => {
@@ -1839,7 +1850,7 @@ function PaymentsTab({ payments, setPayments, issuedBooks, setIssuedBooks, user 
                     }}
                     className="flex-1 btn-primary bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25 justify-center py-2.5"
                   >
-                    Approve Return
+                    Confirm
                   </button>
                   <button 
                     onClick={() => {
