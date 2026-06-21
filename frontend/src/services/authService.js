@@ -1,6 +1,24 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+// Resolve backend API URL dynamically to avoid issues with missing environment variables in Vercel preview/production builds.
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+
+  // Fallback to production URL if running in Vercel (not localhost / 127.0.0.1)
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    !window.location.hostname.includes('localhost') &&
+    !window.location.hostname.includes('127.0.0.1')
+  ) {
+    return 'https://library-management-system-9rm2.onrender.com';
+  }
+
+  return 'http://127.0.0.1:8000';
+};
+
+const API_URL = getApiUrl();
 
 const authService = axios.create({
   baseURL: API_URL,

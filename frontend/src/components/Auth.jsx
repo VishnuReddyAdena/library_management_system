@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Mail, Lock, User, AlertCircle, ArrowRight,
   CheckCircle, Eye, EyeOff, Sparkles,
@@ -476,6 +476,43 @@ export default function Auth({ onNotify, onAuthSuccess, isAdminPortal = false, i
   const [mode, setMode] = useState(
     (isAdminPortal || isLibrarianPortal) ? 'login' : (searchParams.get('mode') === 'signup' ? 'signup' : 'login')
   );
+  const [dbStatus, setDbStatus] = useState('checking');
+
+  useEffect(() => {
+    let active = true;
+    const checkBackend = async () => {
+      try {
+        // Ping health check endpoint to check if backend is online
+        await authService.get('/');
+        if (active) setDbStatus('connected');
+      } catch (err) {
+        console.error('Backend status check failed, retrying...', err);
+        // Set status to sleeping (Render free tier cold-start is likely waking up)
+        if (active) setDbStatus('sleeping');
+        
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts++;
+          if (attempts > 12) { // 1 minute max retry
+            clearInterval(interval);
+            if (active) setDbStatus('error');
+            return;
+          }
+          try {
+            await authService.get('/');
+            clearInterval(interval);
+            if (active) setDbStatus('connected');
+          } catch (retryErr) {
+            console.error('Retry failed:', retryErr);
+          }
+        }, 5000);
+        
+        return () => clearInterval(interval);
+      }
+    };
+    checkBackend();
+    return () => { active = false; };
+  }, []);
 
   const switchTo = (m) => {
     setMode(m);
@@ -532,6 +569,40 @@ export default function Auth({ onNotify, onAuthSuccess, isAdminPortal = false, i
               </button>
             ))}
           </div>
+
+          {/* Backend Connection Status Banner */}
+          {dbStatus !== 'connected' && (
+            <div className={`mb-5 p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-3 transition-all ${
+              dbStatus === 'checking' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' :
+              dbStatus === 'sleeping' ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 animate-pulse' :
+              'bg-red-500/10 border-red-500/30 text-red-300'
+            }`}>
+              {dbStatus === 'checking' && (
+                <>
+                  <svg className="animate-spin w-4 h-4 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" className="opacity-75" />
+                  </svg>
+                  <span>Connecting to database server...</span>
+                </>
+              )}
+              {dbStatus === 'sleeping' && (
+                <>
+                  <svg className="animate-spin w-4 h-4 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" className="opacity-75" />
+                  </svg>
+                  <span>Database server is waking up (Render free tier cold-start). Please wait...</span>
+                </>
+              )}
+              {dbStatus === 'error' && (
+                <>
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>Unable to connect to live backend. Local offline login fallback active.</span>
+                </>
+              )}
+            </div>
+          )}
 
           {mode === 'signup' ? (
             <SignUpForm onSwitch={() => switchTo('login')} onNotify={onNotify} isAdminPortal={isAdminPortal} isLibrarianPortal={isLibrarianPortal} />
